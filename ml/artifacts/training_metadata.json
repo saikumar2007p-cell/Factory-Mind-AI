@@ -1,0 +1,85 @@
+{
+  "dataset": "NASA C-MAPSS FD001",
+  "model_type": "LightGBM Regressor (LGBMRegressor)",
+  "model_params": {
+    "n_estimators": 350,
+    "learning_rate": 0.03,
+    "max_depth": 6,
+    "num_leaves": 31,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "min_child_samples": 20,
+    "random_state": 42,
+    "n_jobs": -1,
+    "verbose": -1,
+    "objective": "regression"
+  },
+  "random_seed": 42,
+  "timestamp_utc": "2026-08-18T04:03:26.935415+00:00",
+  "training_duration_seconds": 1.75,
+  "total_train_records": 20631,
+  "total_train_units": 100,
+  "feature_count": 276,
+  "top_15_features": [
+    {
+      "feature": "s_14_baseline_delta",
+      "importance": 324
+    },
+    {
+      "feature": "s_11_baseline_delta",
+      "importance": 228
+    },
+    {
+      "feature": "s_13_baseline_delta",
+      "importance": 221
+    },
+    {
+      "feature": "s_14_roll_range_20",
+      "importance": 190
+    },
+    {
+      "feature": "s_20_baseline_delta",
+      "importance": 186
+    },
+    {
+      "feature": "s_14_roll_max_20",
+      "importance": 176
+    },
+    {
+      "feature": "s_8_baseline_delta",
+      "importance": 175
+    },
+    {
+      "feature": "s_9_baseline_delta",
+      "importance": 172
+    },
+    {
+      "feature": "s_9_roll_std_20",
+      "importance": 168
+    },
+    {
+      "feature": "s_9_roll_max_20",
+      "importance": 164
+    },
+    {
+      "feature": "s_12_baseline_delta",
+      "importance": 153
+    },
+    {
+      "feature": "s_14_roll_min_20",
+      "importance": 147
+    },
+    {
+      "feature": "s_4_baseline_delta",
+      "importance": 144
+    },
+    {
+      "feature": "s_21_roll_max_20",
+      "importance": 144
+    },
+    {
+      "feature": "s_9_roll_range_20",
+      "importance": 129
+    }
+  ]
+}

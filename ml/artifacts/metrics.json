@@ -1,0 +1,17 @@
+{
+  "validation": {
+    "rmse": 11.59,
+    "mae": 7.915,
+    "r2": 0.9228,
+    "units": 20,
+    "records": 4070
+  },
+  "test_benchmark": {
+    "rmse": 13.413,
+    "mae": 9.211,
+    "r2": 0.888,
+    "cmapss_score": 274.04,
+    "units": 100,
+    "target_rmse_met": true
+  }
+}
