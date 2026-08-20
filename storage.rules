@@ -1,0 +1,56 @@
+rules_version = '2';
+
+// ============================================================================
+// FactoryMind AI — Firebase Storage Security Rules
+//
+// Organization-scoped file access:
+//   organizations/{organizationId}/datasets/
+//   organizations/{organizationId}/documents/
+//   organizations/{organizationId}/maintenance/
+//   organizations/{organizationId}/reports/
+//
+// Roles: ADMIN (full), OPERATOR (read + upload), VIEWER (read only)
+// ============================================================================
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserRole() {
+      return request.auth.token.role;
+    }
+
+    function getUserOrg() {
+      return request.auth.token.organizationId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && getUserRole() == 'ADMIN';
+    }
+
+    function isOperatorOrAbove() {
+      return isSignedIn() && (getUserRole() == 'ADMIN' || getUserRole() == 'OPERATOR');
+    }
+
+    // Organization-scoped files
+    match /organizations/{orgId}/{allPaths=**} {
+      // Read: any signed-in user within the same org
+      allow read: if isSignedIn() && getUserOrg() == orgId;
+
+      // Upload: OPERATOR and ADMIN within the same org
+      allow write: if isOperatorOrAbove() && getUserOrg() == orgId
+                   && request.resource.size < 100 * 1024 * 1024; // 100MB limit
+
+      // Delete: ADMIN only within the same org
+      allow delete: if isAdmin() && getUserOrg() == orgId;
+    }
+
+    // Deny everything else
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

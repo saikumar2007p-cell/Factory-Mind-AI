@@ -1,13 +1,20 @@
 /**
  * frontend/src/services/api.js
  * 
- * Production API Client connecting to FastAPI backend and live WebSocket stream.
+ * Production API Client connecting to FastAPI backend.
+ * 
+ * Authentication:
+ *   - Firebase mode: Automatically attaches Authorization: Bearer <Firebase ID token>
+ *   - Dev mode: Falls back to X-User-Role / X-Actor-Name headers
  */
+
+import { getIdToken } from '../firebase/auth';
+import { isFirebaseConfigured } from '../firebase/config';
 
 const API_BASE = 'http://127.0.0.1:8000/api/v1';
 const WS_URL = 'ws://127.0.0.1:8000/api/v1/stream';
 
-// Session Persistence State
+// Session Persistence State (dev mode fallback)
 const SESSION_ROLE_KEY = 'factorymind_user_role';
 const SESSION_ACTOR_KEY = 'factorymind_actor_name';
 
@@ -33,20 +40,36 @@ export function clearUserSession() {
   localStorage.removeItem(SESSION_ACTOR_KEY);
 }
 
-// Generic Fetch Wrapper with Dynamic RBAC Headers
+// Generic Fetch Wrapper with Firebase Bearer Token + Dev Fallback Headers
 async function request(path, options = {}) {
   const url = `${API_BASE}${path}`;
   const { role, actor } = getUserSession();
 
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  // Attach Firebase ID token if available (production auth)
+  if (isFirebaseConfigured) {
+    try {
+      const token = await getIdToken();
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+    } catch (err) {
+      console.warn('[API] Failed to get Firebase ID token:', err);
+    }
+  }
+
+  // Always send dev headers as fallback (backend respects Firebase token first)
+  headers['X-User-Role'] = role;
+  headers['X-Admin-Role'] = role.toLowerCase();
+  headers['X-Actor-Name'] = actor;
+
   const response = await fetch(url, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      'X-User-Role': role,
-      'X-Admin-Role': role.toLowerCase(),
-      'X-Actor-Name': actor,
-      ...options.headers,
-    },
+    headers,
   });
 
   if (!response.ok) {
@@ -150,14 +173,30 @@ export const uploadTelemetryFile = async (file, defaultMachineId = 'EXT_UNIT_01'
   const formData = new FormData();
   formData.append('file', file);
   formData.append('default_machine_id', defaultMachineId);
+
+  const headers = {};
+
+  // Attach Firebase token for file uploads too
+  if (isFirebaseConfigured) {
+    try {
+      const token = await getIdToken();
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+    } catch (err) {
+      console.warn('[API] Failed to get Firebase token for upload:', err);
+    }
+  }
+
+  // Dev fallback headers
   const { role, actor } = getUserSession();
+  headers['X-User-Role'] = role;
+  headers['X-Admin-Role'] = role.toLowerCase();
+  headers['X-Actor-Name'] = actor;
+
   const response = await fetch(`${API_BASE}/sources/upload-file`, {
     method: 'POST',
-    headers: {
-      'X-User-Role': role,
-      'X-Admin-Role': role.toLowerCase(),
-      'X-Actor-Name': actor
-    },
+    headers,
     body: formData
   });
   if (!response.ok) {
@@ -260,6 +299,20 @@ export const switchAuthRole = (role, actorName = null) => request('/auth/switch-
 });
 export const getSecurityLogs = (limit = 100) => request(`/auth/security-audit-logs?limit=${limit}`);
 export const clearAuthSession = () => request('/auth/clear-session', { method: 'POST' });
+
+// ============================================================================
+// FIREBASE AUTH APIS
+// ============================================================================
+
+export const verifyFirebaseToken = () => request('/firebase/verify');
+export const syncFirebaseUser = (payload = {}) => request('/firebase/sync-user', {
+  method: 'POST',
+  body: JSON.stringify(payload)
+});
+export const setFirebaseUserRole = (uid, role, organizationId) => request('/firebase/set-role', {
+  method: 'POST',
+  body: JSON.stringify({ uid, role, organization_id: organizationId })
+});
 
 // ============================================================================
 // PHASE 2 HARDENING APIS
@@ -394,3 +447,16 @@ export function createWebSocketStream(onMessage, onStatusChange) {
     }
   };
 }
+
+// ============================================================================
+// MULTI-DATASET & EQUIPMENT REGISTRY APIS
+// ============================================================================
+
+export const getDatasets = () => request('/datasets/');
+export const getDatasetStatus = () => request('/datasets/status');
+export const getEquipmentTypes = () => request('/datasets/equipment-types');
+export const getDatasetDetail = (datasetId) => request(`/datasets/${datasetId}`);
+export const getDatasetSensors = (datasetId) => request(`/datasets/${datasetId}/sensors`);
+export const getDatasetTasks = (datasetId) => request(`/datasets/${datasetId}/tasks`);
+export const checkDatasetAvailability = (datasetId) => request(`/datasets/${datasetId}/availability`);
+

@@ -32,9 +32,10 @@ import {
 import ModelVersionPanel from './ModelVersionPanel';
 import UserManagementPanel from './UserManagementPanel';
 import MachineRegistrationQueue from './MachineRegistrationQueue';
+import DatasetSelector from '../Datasets/DatasetSelector';
 
 export default function SettingsView({ userRole = 'ADMIN' }) {
-  const [activeTab, setActiveTab] = useState('connectors'); // 'connectors' | 'models' | 'registrations' | 'users' | 'security'
+  const [activeTab, setActiveTab] = useState('datasets'); // 'datasets' | 'connectors' | 'models' | 'registrations' | 'users' | 'security'
   const [sources, setSources] = useState([]);
   const [activeSource, setActiveSource] = useState(null);
   const [selectedConnector, setSelectedConnector] = useState(null);
@@ -219,6 +220,15 @@ export default function SettingsView({ userRole = 'ADMIN' }) {
 
       {/* Settings Navigation Tabs */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '1px solid #1f2937', paddingBottom: '12px', flexWrap: 'wrap' }}>
+      <button
+          onClick={() => setActiveTab('datasets')}
+          className={`btn btn-sm ${activeTab === 'datasets' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          <Server size={15} />
+          Datasets & Equipment
+        </button>
+
         <button
           onClick={() => setActiveTab('connectors')}
           className={`btn btn-sm ${activeTab === 'connectors' ? 'btn-primary' : 'btn-secondary'}`}
@@ -266,6 +276,16 @@ export default function SettingsView({ userRole = 'ADMIN' }) {
           Security Audit Trail
         </button>
       </div>
+
+      {activeTab === 'datasets' && (
+        <div style={{ marginBottom: '24px' }}>
+          <DatasetSelector
+            onSelectDataset={(id) => console.log('Selected dataset:', id)}
+            activeDatasetId="NASA_CMAPSS_FD001"
+            userRole={userRole}
+          />
+        </div>
+      )}
 
       {activeTab === 'models' && (
         <div style={{ marginBottom: '24px' }}>

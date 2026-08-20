@@ -1,0 +1,186 @@
+rules_version = '2';
+
+// ============================================================================
+// FactoryMind AI — Firestore Security Rules
+//
+// Multi-tenant, role-based access control.
+// Roles: ADMIN, OPERATOR, VIEWER
+// Tenant isolation via: request.auth.token.organizationId
+//
+// IMPORTANT: Users cannot change their own role or organizationId from the client.
+// ============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper Functions ──
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserRole() {
+      return request.auth.token.role;
+    }
+
+    function getUserOrg() {
+      return request.auth.token.organizationId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && getUserRole() == 'ADMIN';
+    }
+
+    function isOperatorOrAbove() {
+      return isSignedIn() && (getUserRole() == 'ADMIN' || getUserRole() == 'OPERATOR');
+    }
+
+    function sameOrg(orgId) {
+      return isSignedIn() && getUserOrg() == orgId;
+    }
+
+    function sameOrgDoc() {
+      return isSignedIn() && resource.data.organizationId == getUserOrg();
+    }
+
+    function sameOrgIncoming() {
+      return isSignedIn() && request.resource.data.organizationId == getUserOrg();
+    }
+
+    // Prevent users from changing their own role or org via client writes
+    function roleNotChanged() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'organizationId']);
+    }
+
+    // ── Organizations ──
+    match /organizations/{orgId} {
+      allow read: if sameOrg(orgId);
+      allow create: if isAdmin() && sameOrg(orgId);
+      allow update: if isAdmin() && sameOrg(orgId);
+      allow delete: if false; // Organizations cannot be deleted from client
+    }
+
+    // ── Users ──
+    match /users/{userId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == userId ||
+        (resource.data.organizationId == getUserOrg())
+      );
+      // Only admins can create/update users; users cannot change their own role
+      allow create: if isAdmin() && sameOrgIncoming();
+      allow update: if isAdmin() && sameOrgDoc() && sameOrgIncoming();
+      // Self-update limited: cannot change role or org
+      allow update: if isSignedIn() && request.auth.uid == userId && roleNotChanged();
+      allow delete: if isAdmin() && sameOrgDoc();
+    }
+
+    // ── Factories ──
+    match /factories/{factoryId} {
+      allow read: if isSignedIn() && sameOrgDoc();
+      allow create: if isAdmin() && sameOrgIncoming();
+      allow update: if isAdmin() && sameOrgDoc();
+      allow delete: if isAdmin() && sameOrgDoc();
+    }
+
+    // ── Production Areas ──
+    match /productionAreas/{areaId} {
+      allow read: if isSignedIn() && sameOrgDoc();
+      allow create: if isAdmin() && sameOrgIncoming();
+      allow update: if isAdmin() && sameOrgDoc();
+      allow delete: if isAdmin() && sameOrgDoc();
+    }
+
+    // ── Machines ──
+    match /machines/{machineId} {
+      allow read: if isSignedIn() && sameOrgDoc();
+      allow create: if isAdmin() && sameOrgIncoming();
+      allow update: if isOperatorOrAbove() && sameOrgDoc();
+      allow delete: if isAdmin() && sameOrgDoc();
+    }
+
+    // ── Subsystems ──
+    match /subsystems/{subsystemId} {
+      allow read: if isSignedIn() && sameOrgDoc();
+      allow create: if isAdmin() && sameOrgIncoming();
+      allow update: if isOperatorOrAbove() && sameOrgDoc();
+      allow delete: if isAdmin() && sameOrgDoc();
+    }
+
+    // ── Sensors ──
+    match /sensors/{sensorId} {
+      allow read: if isSignedIn() && sameOrgDoc();
+      allow create: if isAdmin() && sameOrgIncoming();
+      allow update: if isOperatorOrAbove() && sameOrgDoc();
+      allow delete: if isAdmin() && sameOrgDoc();
+    }
+
+    // ── Telemetry ──
+    match /telemetry/{telemetryId} {
+      allow read: if isSignedIn() && sameOrgDoc();
+      allow create: if isOperatorOrAbove() && sameOrgIncoming();
+      allow update: if false; // Telemetry is immutable
+      allow delete: if isAdmin() && sameOrgDoc();
+    }
+
+    // ── Predictions ──
+    match /predictions/{predictionId} {
+      allow read: if isSignedIn() && sameOrgDoc();
+      allow create: if isOperatorOrAbove() && sameOrgIncoming();
+      allow update: if false; // Predictions are immutable
+      allow delete: if isAdmin() && sameOrgDoc();
+    }
+
+    // ── Diagnostics ──
+    match /diagnostics/{diagnosticId} {
+      allow read: if isSignedIn() && sameOrgDoc();
+      allow create: if isOperatorOrAbove() && sameOrgIncoming();
+      allow update: if false;
+      allow delete: if isAdmin() && sameOrgDoc();
+    }
+
+    // ── Anomalies ──
+    match /anomalies/{anomalyId} {
+      allow read: if isSignedIn() && sameOrgDoc();
+      allow create: if isOperatorOrAbove() && sameOrgIncoming();
+      allow update: if isOperatorOrAbove() && sameOrgDoc(); // Acknowledge
+      allow delete: if isAdmin() && sameOrgDoc();
+    }
+
+    // ── Maintenance Plans ──
+    match /maintenancePlans/{planId} {
+      allow read: if isSignedIn() && sameOrgDoc();
+      allow create: if isOperatorOrAbove() && sameOrgIncoming();
+      allow update: if isOperatorOrAbove() && sameOrgDoc();
+      allow delete: if isAdmin() && sameOrgDoc();
+    }
+
+    // ── Work Orders ──
+    match /workOrders/{orderId} {
+      allow read: if isSignedIn() && sameOrgDoc();
+      allow create: if isOperatorOrAbove() && sameOrgIncoming();
+      allow update: if isOperatorOrAbove() && sameOrgDoc();
+      allow delete: if isAdmin() && sameOrgDoc();
+    }
+
+    // ── Documents (metadata) ──
+    match /documents/{docId} {
+      allow read: if isSignedIn() && sameOrgDoc();
+      allow create: if isOperatorOrAbove() && sameOrgIncoming();
+      allow update: if isOperatorOrAbove() && sameOrgDoc();
+      allow delete: if isAdmin() && sameOrgDoc();
+    }
+
+    // ── Audit Logs — APPEND-ONLY ──
+    match /auditLogs/{logId} {
+      allow read: if isAdmin() && sameOrgDoc();
+      allow create: if isSignedIn() && sameOrgIncoming();
+      allow update: if false; // Audit logs are immutable
+      allow delete: if false; // Audit logs cannot be deleted
+    }
+
+    // ── Catch-all: deny everything else ──
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -3,6 +3,11 @@ backend/app/security.py
 
 Enterprise Role-Based Access Control (RBAC), Rate Limiting, and Security Audit Logging for FactoryMind AI.
 
+Authentication modes:
+- FIREBASE (production): Verifies Firebase ID token from Authorization: Bearer header.
+  Extracts uid, email, role, organizationId from Firebase custom claims.
+- DEVELOPMENT (fallback): Uses X-User-Role / X-Actor-Name headers for local dev/testing.
+
 Supported Roles:
 - ADMIN: Full operational and administrative access.
 - OPERATOR / ENGINEER: Full operational maintenance and prognostic controls.
@@ -17,6 +22,8 @@ import time
 from collections import defaultdict
 from fastapi import Request, Header, HTTPException, status, Depends
 from pydantic import BaseModel, Field
+
+from backend.app.config import settings
 
 logger = logging.getLogger("factorymind.security")
 
@@ -35,6 +42,8 @@ class AuthUser(BaseModel):
     role: UserRole = UserRole.OPERATOR
     permissions: List[str] = Field(default_factory=list)
     authenticated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    organization_id: str = ""
+    auth_method: str = "DEVELOPMENT"  # FIREBASE or DEVELOPMENT
 
 
 # ============================================================================
@@ -48,7 +57,7 @@ class SecurityAuditEvent(BaseModel):
     action_attempted: str
     endpoint: str
     method: str
-    status: str # GRANTED, DENIED, RATE_LIMITED
+    status: str  # GRANTED, DENIED, RATE_LIMITED
     reason: Optional[str] = None
     client_ip: Optional[str] = None
     timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
@@ -69,7 +78,9 @@ class SecurityAuditLogger:
         method: str,
         status: str,
         reason: Optional[str] = None,
-        client_ip: Optional[str] = None
+        client_ip: Optional[str] = None,
+        organization_id: Optional[str] = None,
+        user_id: Optional[str] = None,
     ) -> SecurityAuditEvent:
         event = SecurityAuditEvent(
             id=cls._counter,
@@ -87,11 +98,28 @@ class SecurityAuditLogger:
         # Keep last 500 security events
         if len(cls._events) > 500:
             cls._events = cls._events[-500:]
-        
+
         if status == "DENIED":
             logger.warning(f"[SECURITY DENIED] Actor={actor} Role={role} Action={action} Endpoint={endpoint} Reason={reason}")
         else:
             logger.info(f"[SECURITY GRANTED] Actor={actor} Role={role} Action={action} Endpoint={endpoint}")
+
+        # Async write to Firestore audit log (fire-and-forget, non-blocking)
+        if organization_id:
+            try:
+                from backend.app.services.firestore_service import log_audit_event
+                log_audit_event({
+                    "organizationId": organization_id,
+                    "userId": user_id or actor,
+                    "role": role,
+                    "action": action,
+                    "resourceType": "security",
+                    "resourceId": endpoint,
+                    "details": {"method": method, "status": status, "reason": reason},
+                })
+            except Exception:
+                pass  # Firestore write is best-effort
+
         return event
 
     @classmethod
@@ -135,19 +163,106 @@ auth_rate_limiter = RateLimiter(max_requests=60, window_seconds=60)
 
 
 # ============================================================================
+# Firebase Token Verification
+# ============================================================================
+
+def _verify_firebase_token(token: str) -> Optional[Dict[str, Any]]:
+    """
+    Verifies a Firebase ID token and returns decoded claims.
+    Returns None if verification fails or Firebase is not initialized.
+    """
+    try:
+        from backend.app.firebase_admin_init import is_firebase_ready, get_auth_client
+        if not is_firebase_ready():
+            return None
+        auth_client = get_auth_client()
+        decoded = auth_client.verify_id_token(token)
+        return decoded
+    except Exception as e:
+        logger.warning(f"[Firebase Auth] Token verification failed: {e}")
+        return None
+
+
+def _role_from_claims(claims: Dict[str, Any]) -> UserRole:
+    """Extract UserRole from Firebase custom claims."""
+    raw_role = (claims.get("role") or "VIEWER").strip().upper()
+    if raw_role in ["ADMIN", "ROOT", "SYSTEM_ADMIN"]:
+        return UserRole.ADMIN
+    elif raw_role in ["OPERATOR", "ENGINEER", "SUPERVISOR", "TECHNICIAN"]:
+        return UserRole.OPERATOR
+    elif raw_role in ["VIEWER", "READONLY", "AUDITOR"]:
+        return UserRole.VIEWER
+    return UserRole.VIEWER
+
+
+def _permissions_for_role(role: UserRole) -> List[str]:
+    """Return permissions list for a given role."""
+    if role == UserRole.ADMIN:
+        return ["read", "write", "manage_work_orders", "verify", "admin_config", "view_security_logs"]
+    elif role in [UserRole.OPERATOR, UserRole.ENGINEER]:
+        return ["read", "write", "manage_work_orders", "verify"]
+    else:
+        return ["read"]
+
+
+# ============================================================================
 # FastAPI Authentication & Authorization Dependencies
 # ============================================================================
 
 def get_current_user(
     request: Request,
-    x_user_role: Optional[str] = Header(default=None, description="Active user role header"),
+    authorization: Optional[str] = Header(default=None, description="Bearer <Firebase ID Token>"),
+    x_user_role: Optional[str] = Header(default=None, description="Active user role header (dev mode)"),
     x_admin_role: Optional[str] = Header(default=None, description="Legacy admin role header fallback"),
-    x_actor_name: Optional[str] = Header(default=None, description="Actor identity header")
+    x_actor_name: Optional[str] = Header(default=None, description="Actor identity header (dev mode)")
 ) -> AuthUser:
     """
-    Extracts and validates the current user identity and role from headers.
-    Supports development and production headers with zero fabricated credentials.
+    Extracts and validates the current user identity.
+
+    Production mode (FIREBASE_AUTH_MODE=FIREBASE):
+        Requires Authorization: Bearer <token> header.
+        Verifies Firebase ID token and extracts uid, email, role, organizationId.
+
+    Development mode (FIREBASE_AUTH_MODE=DEVELOPMENT):
+        Falls back to X-User-Role / X-Actor-Name headers for local testing.
+        Firebase token is still preferred if present.
     """
+    # --- Try Firebase token first (always, regardless of mode) ---
+    if authorization and authorization.lower().startswith("bearer "):
+        token = authorization[7:].strip()
+        if token:
+            decoded = _verify_firebase_token(token)
+            if decoded:
+                role = _role_from_claims(decoded)
+                permissions = _permissions_for_role(role)
+                org_id = decoded.get("organizationId", decoded.get("organization_id", ""))
+
+                return AuthUser(
+                    user_id=decoded.get("uid", ""),
+                    username=decoded.get("email", decoded.get("name", "Firebase User")),
+                    role=role,
+                    permissions=permissions,
+                    organization_id=org_id,
+                    auth_method="FIREBASE",
+                )
+
+            # Token was provided but invalid
+            if settings.is_firebase_auth_enabled:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid or expired Firebase authentication token.",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
+    # --- Production mode requires Firebase token ---
+    if settings.is_firebase_auth_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Firebase authentication required. Provide Authorization: Bearer <token> header.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # --- Development fallback: header-based RBAC ---
     raw_role = x_user_role or x_admin_role or "OPERATOR"
     normalized_role = raw_role.strip().upper()
 
@@ -184,7 +299,8 @@ def get_current_user(
         user_id=f"USR-{role.value}",
         username=actor_name,
         role=role,
-        permissions=permissions
+        permissions=permissions,
+        auth_method="DEVELOPMENT",
     )
 
 
@@ -212,7 +328,9 @@ def require_role(allowed_roles: List[str]):
                     method=request.method,
                     status="RATE_LIMITED",
                     reason="Rate limit exceeded",
-                    client_ip=client_ip
+                    client_ip=client_ip,
+                    organization_id=user.organization_id,
+                    user_id=user.user_id,
                 )
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -228,7 +346,9 @@ def require_role(allowed_roles: List[str]):
                 method=request.method,
                 status="DENIED",
                 reason=f"Role '{user.role.value}' not in allowed roles: {allowed_roles}",
-                client_ip=client_ip
+                client_ip=client_ip,
+                organization_id=user.organization_id,
+                user_id=user.user_id,
             )
             required_str = " / ".join(allowed_roles)
             raise HTTPException(
@@ -243,7 +363,9 @@ def require_role(allowed_roles: List[str]):
             endpoint=request.url.path,
             method=request.method,
             status="GRANTED",
-            client_ip=client_ip
+            client_ip=client_ip,
+            organization_id=user.organization_id,
+            user_id=user.user_id,
         )
         return user
 

@@ -42,6 +42,8 @@ from backend.app.routers import (
     users,
     machine_registrations
 )
+from backend.app.routers import firebase_auth
+from backend.app.routers import datasets
 
 # Logging configuration
 logging.basicConfig(
@@ -56,8 +58,20 @@ async def lifespan(app: FastAPI):
     """Application startup and shutdown event handler."""
     logger.info("Starting FactoryMind AI Backend...")
     logger.info(f"Active Database Backend: {'Local SQLite Fallback' if settings.is_sqlite_fallback else 'PostgreSQL / Supabase'}")
-    
-    # Initialize database tables
+    logger.info(f"Firebase Auth Mode: {settings.FIREBASE_AUTH_MODE}")
+
+    # Initialize Firebase Admin SDK
+    try:
+        from backend.app.firebase_admin_init import init_firebase_admin, is_firebase_ready
+        firebase_app = init_firebase_admin()
+        if firebase_app:
+            logger.info("Firebase Admin SDK initialized successfully.")
+        else:
+            logger.warning("Firebase Admin SDK not initialized — check FIREBASE_SERVICE_ACCOUNT_PATH.")
+    except Exception as e:
+        logger.warning(f"Firebase Admin SDK initialization skipped: {e}")
+
+    # Initialize database tables (SQL — kept for ML pipeline compatibility)
     try:
         await init_db()
         logger.info("Database initialized successfully.")
@@ -146,6 +160,7 @@ async def global_exception_handler(request, exc):
 # Register REST Routers under /api/v1
 api_v1_prefix = "/api/v1"
 app.include_router(auth.router, prefix=api_v1_prefix)
+app.include_router(firebase_auth.router, prefix=api_v1_prefix)
 app.include_router(users.router, prefix=api_v1_prefix)
 app.include_router(machines.router, prefix=api_v1_prefix)
 app.include_router(machine_registrations.router, prefix=api_v1_prefix)
@@ -161,6 +176,7 @@ app.include_router(work_orders.router, prefix=api_v1_prefix)
 app.include_router(outcomes.router, prefix=api_v1_prefix)
 app.include_router(fleet.router, prefix=api_v1_prefix)
 app.include_router(continuous_learning.router, prefix=api_v1_prefix)
+app.include_router(datasets.router, prefix=api_v1_prefix)
 
 
 
@@ -168,11 +184,14 @@ app.include_router(continuous_learning.router, prefix=api_v1_prefix)
 @app.get(f"{api_v1_prefix}/health", tags=["Health"])
 async def healthcheck() -> Dict[str, Any]:
     """Health check endpoint confirming API and backend status."""
+    from backend.app.firebase_admin_init import is_firebase_ready
     return {
         "status": "HEALTHY",
         "service": "FactoryMind AI Backend",
         "version": "1.0.0",
         "database": "SQLite Fallback" if settings.is_sqlite_fallback else "PostgreSQL/Supabase",
+        "firebase_admin": "READY" if is_firebase_ready() else "NOT_CONFIGURED",
+        "firebase_auth_mode": settings.FIREBASE_AUTH_MODE,
         "ml_inference_ready": True,
         "dataset": "NASA C-MAPSS FD001"
     }

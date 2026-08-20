@@ -15,6 +15,9 @@ import DocumentsView from './components/Documents/DocumentsView';
 import SettingsView from './components/Settings/SettingsView';
 import RoleAuthModal from './components/Layout/RoleAuthModal';
 import LoginPage from './components/Layout/LoginPage';
+import { isFirebaseConfigured } from './firebase/config';
+import { onAuthStateChanged, signOutUser, getCurrentUserRole } from './firebase/auth';
+import { syncFirebaseUser } from './services/api';
 
 import {
   getMachines,
@@ -31,7 +34,8 @@ import {
   getActiveDataSource,
   getUserSession,
   setUserSession,
-  switchAuthRole
+  switchAuthRole,
+  clearUserSession
 } from './services/api';
 
 export default function App() {
@@ -40,17 +44,56 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [authLoading, setAuthLoading] = useState(isFirebaseConfigured);
 
-  // Login gate — show LoginPage until user authenticates
+  // Login gate
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    if (isFirebaseConfigured) return false; // Wait for onAuthStateChanged
     const sess = getUserSession();
     return !!sess.role && !!sess.actor;
   });
 
-  // Stage 11 User Session & RBAC State
+  // User Session & RBAC State
   const [userSession, setUserSessionState] = useState(() => getUserSession());
   const userRole = userSession?.role || 'ADMIN';
   const userActor = userSession?.actor || 'Chief Operations Admin';
+
+  // Firebase auth state listener
+  useEffect(() => {
+    if (!isFirebaseConfigured) {
+      setAuthLoading(false);
+      return;
+    }
+
+    const unsubscribe = onAuthStateChanged(async (firebaseUser) => {
+      if (firebaseUser) {
+        // User is signed in via Firebase
+        const role = await getCurrentUserRole() || 'VIEWER';
+        const displayName = firebaseUser.displayName || firebaseUser.email;
+        setUserSession(role, displayName);
+        setUserSessionState(getUserSession());
+        setIsLoggedIn(true);
+
+        // Sync user to Firestore (fire-and-forget)
+        try {
+          await syncFirebaseUser({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            name: displayName,
+            role: role,
+          });
+        } catch (e) {
+          console.warn('[App] Firestore sync skipped:', e);
+        }
+      } else {
+        // Signed out
+        setIsLoggedIn(false);
+      }
+      setAuthLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const handleRoleAuthenticated = (newRole, newActor) => {
     setUserSession(newRole, newActor);
@@ -58,13 +101,36 @@ export default function App() {
     setUserSessionState(updated);
   };
 
-  const handleLogin = (role, actor) => {
+  const handleLogin = (role, actor, firebaseInfo) => {
     setUserSession(role, actor);
     setUserSessionState(getUserSession());
     setIsLoggedIn(true);
   };
 
-  // Show login page first
+  const handleLogout = async () => {
+    if (isFirebaseConfigured) {
+      await signOutUser();
+    }
+    clearUserSession();
+    setIsLoggedIn(false);
+    setUserSessionState({ role: '', actor: '' });
+  };
+
+  // Show loading spinner during Firebase auth check
+  if (authLoading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0c4a6e 100%)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: '#94a3b8', fontSize: 14
+      }}>
+        Authenticating...
+      </div>
+    );
+  }
+
+  // Show login page
   if (!isLoggedIn) {
     return <LoginPage onLogin={handleLogin} />;
   }
@@ -104,12 +170,9 @@ export default function App() {
         setAlerts(aRes.value.alerts || []);
       }
       if (sRes.status === 'fulfilled') {
-        // Only update cycle/unit from REST if WebSocket is NOT connected
-        // — prevents the counter from glitching when WS is live
         setSimulationState(prev => {
           const restState = sRes.value;
           if (wsConnectedRef.current && prev) {
-            // Keep WS-tracked live values; only update non-live fields
             return {
               ...restState,
               current_cycle: prev.current_cycle,
@@ -271,10 +334,10 @@ export default function App() {
       return { title: `Machine Details — Unit #${String(selectedMachineId).padStart(3, '0')}`, sub: 'Detailed sensor measurements and AI root-cause diagnostics' };
     }
     switch (activeTab) {
-      case 'dashboard': return { title: 'Fleet Overview', sub: 'Plant-wide turbofan health & degradation status' };
+      case 'dashboard': return { title: 'Fleet Overview', sub: 'Plant-wide health & degradation status' };
       case 'fleet': return { title: 'Fleet Intelligence & Predictive Planning', sub: 'Prognostic coverage, subsystem defect analytics, and planning priorities' };
       case 'learning': return { title: 'Continuous Learning & Maintenance Intelligence', sub: 'Verified outcomes, defect recurrence patterns, and executive analytics' };
-      case 'machines': return { title: 'Machine Fleet', sub: '100 Monitored Turbofan CF6-80C2 units' };
+      case 'machines': return { title: 'Machine Fleet', sub: 'Monitored industrial equipment across all datasets' };
       case 'alerts': return { title: 'Active Alarms', sub: 'Multi-cycle threshold events and alarms' };
       case 'insights': return { title: 'AI Diagnostics', sub: 'Grounded Gemini root cause reasoning' };
       case 'maintenance': return { title: 'Prescriptive Maintenance', sub: 'Actionable work orders and tasks' };
@@ -319,6 +382,7 @@ export default function App() {
           currentUserRole={userRole}
           currentUserActor={userActor}
           onOpenRoleModal={() => setIsRoleModalOpen(true)}
+          onLogout={handleLogout}
         />
 
         {/* Role Session Access Banner */}
