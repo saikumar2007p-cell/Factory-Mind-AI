@@ -23,10 +23,11 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    # --- Identity ---
+    # --- Identity & Security ---
     username = Column(String(100), unique=True, nullable=False, index=True)
     display_name = Column(String(200), nullable=False)
     email = Column(String(255), unique=True, nullable=True)
+    password_hash = Column(String(255), nullable=True)
 
     # --- Role ---
     # ADMIN | OPERATOR | ENGINEER | VIEWER

@@ -18,7 +18,9 @@ from typing import Optional, Any
 logger = logging.getLogger("factorymind.firebase")
 
 try:
+    # pyrefly: ignore [missing-import]
     import firebase_admin
+    # pyrefly: ignore [missing-import]
     from firebase_admin import credentials, auth, firestore, storage as fb_storage
     FIREBASE_AVAILABLE = True
 except ImportError:

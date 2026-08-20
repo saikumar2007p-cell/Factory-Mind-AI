@@ -7,6 +7,7 @@ and seamless persistence of real Stage 2 inference outputs.
 """
 
 import pytest
+# pyrefly: ignore [missing-import]
 import pytest_asyncio
 import os
 from pathlib import Path

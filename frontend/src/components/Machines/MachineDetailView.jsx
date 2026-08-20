@@ -26,7 +26,8 @@ import {
   getMachineWorkOrders,
   createWorkOrder,
   getMachineMaintenanceHistory,
-  getLearningSignals
+  getLearningSignals,
+  getCached
 } from '../../services/api';
 
 import BehavioralChangeFeed from './BehavioralChangeFeed';
@@ -40,29 +41,23 @@ export default function MachineDetailView({
   latestDiagnosis,
   userRole = 'ADMIN'
 }) {
-  const [machine, setMachine] = useState(null);
-  const [telemetry, setTelemetry] = useState([]);
-  const [prediction, setPrediction] = useState(null);
-  const [predHistory, setPredHistory] = useState([]);
-  const [alerts, setAlerts] = useState([]);
-  const [workOrders, setWorkOrders] = useState([]);
+  const [machine, setMachine] = useState(() => getCached(`/machines/${machineId}`));
+  const [telemetry, setTelemetry] = useState(() => getCached(`/telemetry/${machineId}?limit=30`)?.telemetry || []);
+  const [prediction, setPrediction] = useState(() => getCached(`/predictions/${machineId}/latest`));
+  const [predHistory, setPredHistory] = useState(() => getCached(`/predictions/${machineId}/history?limit=50`) || []);
+  const [alerts, setAlerts] = useState(() => getCached(`/alerts/machine/${machineId}`) || []);
+  const [workOrders, setWorkOrders] = useState(() => getCached(`/work-orders/machine/${machineId}`) || []);
   const [maintHistory, setMaintHistory] = useState(null);
   const [machineSignals, setMachineSignals] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !getCached(`/machines/${machineId}`));
   const [activeTab, setActiveTab] = useState('telemetry'); // telemetry, trends, alerts, maintenance, learning
   const [selectedSensor, setSelectedSensor] = useState('s_4'); // T50 default
 
   useEffect(() => {
     async function loadData() {
-      setLoading(true);
-      setMachine(null);
-      setTelemetry([]);
-      setPrediction(null);
-      setPredHistory([]);
-      setAlerts([]);
-      setWorkOrders([]);
-      setMaintHistory(null);
-      setMachineSignals([]);
+      if (!getCached(`/machines/${machineId}`)) {
+        setLoading(true);
+      }
       try {
         const [mRes, tRes, pRes, hRes, aRes, wRes, histRes, sigRes] = await Promise.allSettled([
           getMachine(machineId),

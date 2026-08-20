@@ -35,28 +35,31 @@ import {
   getLearningSignals,
   getHistoricalTrends,
   getExecutiveSummary,
-  getWorkOrders
+  getWorkOrders,
+  getCached
 } from '../../services/api';
 
 export default function ContinuousLearningView({ onSelectMachine, onNavigateTab, latestLiveFrame, searchQuery }) {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const [execSummary, setExecSummary] = useState(null);
-  const [effectivenessData, setEffectivenessData] = useState(null);
-  const [recurringFailures, setRecurringFailures] = useState([]);
-  const [subsystems, setSubsystems] = useState([]);
-  const [learningSignals, setLearningSignals] = useState([]);
+  const [execSummary, setExecSummary] = useState(() => getCached('/learning/executive-summary'));
+  const [effectivenessData, setEffectivenessData] = useState(() => getCached('/learning/maintenance-effectiveness'));
+  const [recurringFailures, setRecurringFailures] = useState(() => getCached('/learning/recurring-failures') || []);
+  const [subsystems, setSubsystems] = useState(() => getCached('/learning/subsystems') || []);
+  const [learningSignals, setLearningSignals] = useState(() => getCached('/learning/signals')?.signals || []);
   const [completedOrders, setCompletedOrders] = useState([]);
-  const [trendsData, setTrendsData] = useState({});
+  const [trendsData, setTrendsData] = useState(() => getCached('/learning/historical-trends')?.trends || {});
   const [selectedTrendType, setSelectedTrendType] = useState('RISK');
+
+  const [loading, setLoading] = useState(() => !getCached('/learning/executive-summary'));
+  const [error, setError] = useState(null);
 
   const [filterSignalType, setFilterSignalType] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
 
   const loadData = async () => {
     try {
-      setLoading(true);
+      if (!execSummary) {
+        setLoading(true);
+      }
       setError(null);
 
       const [execRes, effRes, recRes, subRes, sigRes, trendRes, woRes] = await Promise.all([

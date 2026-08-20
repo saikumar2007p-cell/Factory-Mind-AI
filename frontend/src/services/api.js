@@ -18,10 +18,25 @@ const WS_URL = 'ws://127.0.0.1:8000/api/v1/stream';
 const SESSION_ROLE_KEY = 'factorymind_user_role';
 const SESSION_ACTOR_KEY = 'factorymind_actor_name';
 
+// In-Memory API Cache for instant (<1ms) tab navigation & non-blocking SWR
+const apiCache = new Map();
+const apiPending = new Map();
+
+export function getCached(path) {
+  const item = apiCache.get(path);
+  return item ? item.data : null;
+}
+
 export function getUserSession() {
-  const role = localStorage.getItem(SESSION_ROLE_KEY) || 'ADMIN';
-  const actor = localStorage.getItem(SESSION_ACTOR_KEY) || (role === 'ADMIN' ? 'Chief Operations Admin' : (role === 'OPERATOR' ? 'Field Engineer' : 'Read-Only Auditor'));
-  return { role, actor };
+  const role = localStorage.getItem(SESSION_ROLE_KEY);
+  const actor = localStorage.getItem(SESSION_ACTOR_KEY);
+  if (!role) {
+    return { role: null, actor: null };
+  }
+  return {
+    role,
+    actor: actor || (role === 'ADMIN' ? 'Chief Operations Admin' : (role === 'OPERATOR' ? 'Field Engineer' : 'Read-Only Auditor'))
+  };
 }
 
 export function setUserSession(role, actor = null) {
@@ -38,66 +53,102 @@ export function setUserSession(role, actor = null) {
 export function clearUserSession() {
   localStorage.removeItem(SESSION_ROLE_KEY);
   localStorage.removeItem(SESSION_ACTOR_KEY);
+  apiCache.clear();
+  apiPending.clear();
 }
 
-// Generic Fetch Wrapper with Firebase Bearer Token + Dev Fallback Headers
+// Generic Fetch Wrapper with in-memory caching + Firebase Bearer Token + Dev Fallback Headers
 async function request(path, options = {}) {
+  const isGet = !options.method || options.method.toUpperCase() === 'GET';
   const url = `${API_BASE}${path}`;
-  const { role, actor } = getUserSession();
 
-  const headers = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-  };
-
-  // Attach Firebase ID token if available (production auth)
-  if (isFirebaseConfigured) {
-    try {
-      const token = await getIdToken();
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-    } catch (err) {
-      console.warn('[API] Failed to get Firebase ID token:', err);
+  // If GET and cached within 10s, return cached immediately unless forceRefresh
+  if (isGet && !options.forceRefresh && apiCache.has(path)) {
+    const cached = apiCache.get(path);
+    if (Date.now() - cached.ts < 10000) {
+      return cached.data;
     }
   }
 
-  // Always send dev headers as fallback (backend respects Firebase token first)
-  headers['X-User-Role'] = role;
-  headers['X-Admin-Role'] = role.toLowerCase();
-  headers['X-Actor-Name'] = actor;
-
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-    let errorDetail = errorBody;
-    try {
-      const parsed = JSON.parse(errorBody);
-      if (parsed.detail) {
-        errorDetail = typeof parsed.detail === 'string' ? parsed.detail : JSON.stringify(parsed.detail);
-      }
-    } catch (_) {}
-
-    // Clean user-friendly message
-    if (response.status === 403) {
-      errorDetail = errorDetail || 'Permission denied — Authorized role required.';
-    } else if (response.status === 401) {
-      errorDetail = errorDetail || 'Authentication required.';
-    } else if (response.status === 429) {
-      errorDetail = errorDetail || 'Rate limit reached. Please wait a moment.';
-    }
-
-    const err = new Error(errorDetail);
-    err.status = response.status;
-    err.detail = errorDetail;
-    throw err;
+  // Deduplicate identical simultaneous in-flight GET requests
+  if (isGet && apiPending.has(path)) {
+    return apiPending.get(path);
   }
 
-  return response.json();
+  const fetchPromise = (async () => {
+    try {
+      const { role, actor } = getUserSession();
+      const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      };
+
+      if (isFirebaseConfigured) {
+        try {
+          const token = await getIdToken();
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
+        } catch (err) {
+          console.warn('[API] Failed to get Firebase ID token:', err);
+        }
+      }
+
+      headers['X-User-Role'] = role || 'ADMIN';
+      headers['X-Admin-Role'] = (role || 'admin').toLowerCase();
+      headers['X-Actor-Name'] = actor || 'User (ADMIN)';
+
+      const response = await fetch(url, {
+        ...options,
+        headers,
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        let errorDetail = errorBody;
+        try {
+          const parsed = JSON.parse(errorBody);
+          if (parsed.detail) {
+            errorDetail = typeof parsed.detail === 'string' ? parsed.detail : JSON.stringify(parsed.detail);
+          }
+        } catch (_) {}
+
+        if (response.status === 403) {
+          errorDetail = errorDetail || 'Permission denied — Authorized role required.';
+        } else if (response.status === 401) {
+          errorDetail = errorDetail || 'Authentication required.';
+        } else if (response.status === 429) {
+          errorDetail = errorDetail || 'Rate limit reached. Please wait a moment.';
+        }
+
+        const err = new Error(errorDetail);
+        err.status = response.status;
+        throw err;
+      }
+
+      const contentType = response.headers.get('content-type');
+      let data;
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        data = await response.text();
+      }
+
+      if (isGet) {
+        apiCache.set(path, { data, ts: Date.now() });
+      }
+      return data;
+    } finally {
+      if (isGet) {
+        apiPending.delete(path);
+      }
+    }
+  })();
+
+  if (isGet) {
+    apiPending.set(path, fetchPromise);
+  }
+  return fetchPromise;
 }
 
 // Machines API
@@ -290,6 +341,21 @@ export const getLearningOverview = () => request('/learning/overview');
 // ============================================================================
 // STAGE 11 AUTHENTICATION & SECURITY AUDIT APIS
 // ============================================================================
+
+export const authRegister = (email, password, displayName = null, role = 'ADMIN') => request('/auth/register', {
+  method: 'POST',
+  body: JSON.stringify({
+    email,
+    password,
+    display_name: displayName,
+    role
+  })
+});
+
+export const authLogin = (email, password) => request('/auth/login', {
+  method: 'POST',
+  body: JSON.stringify({ email, password })
+});
 
 export const getAuthMe = () => request('/auth/me');
 export const getAuthRoles = () => request('/auth/roles');

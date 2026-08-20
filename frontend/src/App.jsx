@@ -44,55 +44,45 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
-  const [authLoading, setAuthLoading] = useState(isFirebaseConfigured);
-
-  // Login gate
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    if (isFirebaseConfigured) return false; // Wait for onAuthStateChanged
-    const sess = getUserSession();
-    return !!sess.role && !!sess.actor;
-  });
-
-  // User Session & RBAC State
+  // Session state from localStorage (fast instant load)
   const [userSession, setUserSessionState] = useState(() => getUserSession());
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    const sess = getUserSession();
+    return !!(sess && sess.role && sess.actor);
+  });
+  const [authLoading, setAuthLoading] = useState(false);
+
   const userRole = userSession?.role || 'ADMIN';
   const userActor = userSession?.actor || 'Chief Operations Admin';
 
-  // Firebase auth state listener
+  // Firebase auth state listener (enhances session if Firebase is active)
   useEffect(() => {
-    if (!isFirebaseConfigured) {
-      setAuthLoading(false);
-      return;
-    }
+    if (!isFirebaseConfigured) return;
 
-    const unsubscribe = onAuthStateChanged(async (firebaseUser) => {
-      if (firebaseUser) {
-        // User is signed in via Firebase
-        const role = await getCurrentUserRole() || 'VIEWER';
-        const displayName = firebaseUser.displayName || firebaseUser.email;
-        setUserSession(role, displayName);
-        setUserSessionState(getUserSession());
-        setIsLoggedIn(true);
+    try {
+      const unsubscribe = onAuthStateChanged(async (firebaseUser) => {
+        if (firebaseUser) {
+          try {
+            const role = await getCurrentUserRole() || 'VIEWER';
+            const displayName = firebaseUser.displayName || firebaseUser.email;
+            setUserSession(role, displayName);
+            setUserSessionState(getUserSession());
+            setIsLoggedIn(true);
 
-        // Sync user to Firestore (fire-and-forget)
-        try {
-          await syncFirebaseUser({
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            name: displayName,
-            role: role,
-          });
-        } catch (e) {
-          console.warn('[App] Firestore sync skipped:', e);
+            // Sync user to Firestore (fire-and-forget)
+            syncFirebaseUser({
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              name: displayName,
+              role: role,
+            }).catch(() => {});
+          } catch (_) {}
         }
-      } else {
-        // Signed out
-        setIsLoggedIn(false);
-      }
-      setAuthLoading(false);
-    });
-
-    return () => unsubscribe();
+      });
+      return () => unsubscribe();
+    } catch (e) {
+      console.warn('[App] Firebase auth state listener skipped:', e);
+    }
   }, []);
 
   const handleRoleAuthenticated = (newRole, newActor) => {
@@ -101,7 +91,7 @@ export default function App() {
     setUserSessionState(updated);
   };
 
-  const handleLogin = (role, actor, firebaseInfo) => {
+  const handleLogin = (role, actor, extra = {}) => {
     setUserSession(role, actor);
     setUserSessionState(getUserSession());
     setIsLoggedIn(true);
@@ -109,28 +99,16 @@ export default function App() {
 
   const handleLogout = async () => {
     if (isFirebaseConfigured) {
-      await signOutUser();
+      try {
+        await signOutUser();
+      } catch (_) {}
     }
     clearUserSession();
     setIsLoggedIn(false);
     setUserSessionState({ role: '', actor: '' });
   };
 
-  // Show loading spinner during Firebase auth check
-  if (authLoading) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #0c4a6e 100%)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: '#94a3b8', fontSize: 14
-      }}>
-        Authenticating...
-      </div>
-    );
-  }
-
-  // Show login page
+  // Show login page if not authenticated
   if (!isLoggedIn) {
     return <LoginPage onLogin={handleLogin} />;
   }
@@ -324,6 +302,9 @@ export default function App() {
   };
 
   const handleSelectTab = (tabId) => {
+    if (tabId === 'settings' && userRole !== 'ADMIN') {
+      return; // Strictly block non-admin from accessing settings
+    }
     setSelectedMachineId(null);
     setActiveTab(tabId);
   };
@@ -359,6 +340,8 @@ export default function App() {
         fleetSummary={fleetSummary}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        onLogout={handleLogout}
+        userRole={userRole}
       />
 
       {/* Main Working Area */}
@@ -383,6 +366,10 @@ export default function App() {
           currentUserActor={userActor}
           onOpenRoleModal={() => setIsRoleModalOpen(true)}
           onLogout={handleLogout}
+          machines={machines}
+          alerts={alerts}
+          onSelectMachine={handleSelectMachine}
+          onNavigateTab={handleSelectTab}
         />
 
         {/* Role Session Access Banner */}

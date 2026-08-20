@@ -73,10 +73,34 @@ async def get_latest_machine_prediction(
     service = StorageService(session)
     pred = await service.get_latest_prediction(machine_id)
     if not pred:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No predictions found for machine ID {machine_id}."
-        )
+        machine = await service.get_machine_by_id(machine_id)
+        if not machine:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Machine with ID {machine_id} not found."
+            )
+        
+        # Load telemetry or generate dynamic inference
+        try:
+            from ml.dataset import CMAPSSDataset
+            from ml.inference import get_inference_engine
+            dataset = CMAPSSDataset()
+            df_train = dataset.load_raw_train()
+            unit_num = machine.unit_number
+            unit_df = df_train[df_train["unit_number"] == unit_num].sort_values("time_cycle").reset_index(drop=True)
+            if unit_df.empty:
+                mapped_u = ((unit_num - 1) % 100) + 1
+                unit_df = df_train[df_train["unit_number"] == mapped_u].sort_values("time_cycle").reset_index(drop=True)
+            
+            engine = get_inference_engine()
+            res = engine.predict_window(unit_df.tail(30))
+            pred, _, _ = await service.persist_inference_cycle(machine.id, res)
+            await session.commit()
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No predictions found for machine ID {machine_id}."
+            )
     return PredictionResponse(**pred.to_dict())
 
 

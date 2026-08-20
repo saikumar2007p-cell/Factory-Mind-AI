@@ -5,9 +5,16 @@ Authentication, Session Identity, Role Management & Security Audit Logs Router.
 """
 
 from typing import List, Dict, Any, Optional
+import hashlib
+import secrets
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
-from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from pydantic import BaseModel, Field, EmailStr
 
+from backend.app.database import get_db
+from backend.app.models.user import User
 from backend.app.security import (
     AuthUser,
     UserRole,
@@ -20,6 +27,49 @@ from backend.app.security import (
 router = APIRouter(prefix="/auth", tags=["Authentication & Security"])
 
 
+def hash_password(password: str) -> str:
+    """PBKDF2-SHA256 password hash with unique random salt."""
+    salt = secrets.token_hex(16)
+    key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('utf-8'), 100000)
+    return f"pbkdf2_sha256${salt}${key.hex()}"
+
+
+def verify_password(password: str, hashed: Optional[str]) -> bool:
+    """Verifies password against PBKDF2 hash."""
+    if not hashed:
+        return False
+    parts = hashed.split('$')
+    if len(parts) != 3 or parts[0] != 'pbkdf2_sha256':
+        return False
+    salt = parts[1]
+    expected_hex = parts[2]
+    key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('utf-8'), 100000)
+    return secrets.compare_digest(key.hex(), expected_hex)
+
+
+class RegisterRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=255, description="User email address")
+    password: str = Field(min_length=6, max_length=128, description="User password")
+    display_name: Optional[str] = Field(default=None, max_length=200)
+    role: Optional[str] = Field(default="ADMIN", description="ADMIN | OPERATOR | VIEWER")
+
+
+class LoginRequest(BaseModel):
+    email: str = Field(description="User email address or username")
+    password: str = Field(description="User password")
+
+
+class AuthResponse(BaseModel):
+    user_id: str
+    db_user_id: int
+    username: str
+    display_name: str
+    email: str
+    role: str
+    permissions: List[str]
+    message: str
+
+
 class RoleSwitchRequest(BaseModel):
     role: str = Field(description="Desired role: ADMIN, OPERATOR, VIEWER")
     actor_name: Optional[str] = Field(default=None, max_length=100)
@@ -30,6 +80,170 @@ class RoleInfo(BaseModel):
     display_name: str
     description: str
     permissions: List[str]
+
+
+@router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
+async def register(
+    payload: RegisterRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Registers a new account in the persistent database with hashed password credentials.
+    """
+    email_clean = payload.email.strip().lower()
+    raw_role = (payload.role or "ADMIN").strip().upper()
+    if raw_role not in [r.value for r in UserRole]:
+        raw_role = "ADMIN"
+    target_role = UserRole(raw_role)
+
+    # Check if user already exists
+    stmt = select(User).where((User.email == email_clean) | (User.username == email_clean))
+    result = await db.execute(stmt)
+    existing = result.scalar_one_or_none()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"An account with email '{email_clean}' already exists. Please sign in."
+        )
+
+    # Username from email prefix or display name
+    base_username = email_clean.split('@')[0]
+    display = payload.display_name.strip() if payload.display_name else base_username.replace('.', ' ').title()
+
+    new_user = User(
+        username=email_clean,
+        display_name=display,
+        email=email_clean,
+        password_hash=hash_password(payload.password),
+        role=target_role.value,
+        is_active=True,
+        last_login_at=datetime.now(timezone.utc)
+    )
+    db.add(new_user)
+    await db.commit()
+    await db.refresh(new_user)
+
+    if target_role == UserRole.ADMIN:
+        permissions = ["read", "write", "manage_work_orders", "verify", "admin_config", "view_security_logs"]
+    elif target_role in (UserRole.OPERATOR, UserRole.ENGINEER):
+        permissions = ["read", "write", "manage_work_orders", "verify"]
+    else:
+        permissions = ["read"]
+
+    client_ip = request.client.host if request.client else "unknown"
+    SecurityAuditLogger.record(
+        actor=display,
+        role=target_role.value,
+        action=f"USER_REGISTER({email_clean})",
+        endpoint="/api/v1/auth/register",
+        method="POST",
+        status="GRANTED",
+        client_ip=client_ip
+    )
+
+    return AuthResponse(
+        user_id=f"USR-{new_user.id}",
+        db_user_id=new_user.id,
+        username=new_user.username,
+        display_name=new_user.display_name,
+        email=new_user.email or email_clean,
+        role=new_user.role,
+        permissions=permissions,
+        message="Registration successful"
+    )
+
+
+@router.post("/login", response_model=AuthResponse)
+async def login(
+    payload: LoginRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Authenticates a user against persistent database records.
+    """
+    ident = payload.email.strip().lower()
+    client_ip = request.client.host if request.client else "unknown"
+
+    stmt = select(User).where((User.email == ident) | (User.username == ident))
+    result = await db.execute(stmt)
+    user = result.scalar_one_or_none()
+
+    if not user:
+        SecurityAuditLogger.record(
+            actor=ident,
+            role="UNKNOWN",
+            action="LOGIN_FAILED_NOT_FOUND",
+            endpoint="/api/v1/auth/login",
+            method="POST",
+            status="DENIED",
+            reason="User not found",
+            client_ip=client_ip
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password."
+        )
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is deactivated. Contact an administrator."
+        )
+
+    # Verify password if user has password_hash
+    if user.password_hash:
+        if not verify_password(payload.password, user.password_hash):
+            SecurityAuditLogger.record(
+                actor=user.display_name,
+                role=user.role,
+                action="LOGIN_FAILED_BAD_PASSWORD",
+                endpoint="/api/v1/auth/login",
+                method="POST",
+                status="DENIED",
+                reason="Password mismatch",
+                client_ip=client_ip
+            )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password."
+            )
+    else:
+        # Legacy user created without password: set their password now on successful initial login
+        user.password_hash = hash_password(payload.password)
+
+    user.last_login_at = datetime.now(timezone.utc)
+    await db.commit()
+
+    role_enum = UserRole(user.role) if user.role in [r.value for r in UserRole] else UserRole.OPERATOR
+    if role_enum == UserRole.ADMIN:
+        permissions = ["read", "write", "manage_work_orders", "verify", "admin_config", "view_security_logs"]
+    elif role_enum in (UserRole.OPERATOR, UserRole.ENGINEER):
+        permissions = ["read", "write", "manage_work_orders", "verify"]
+    else:
+        permissions = ["read"]
+
+    SecurityAuditLogger.record(
+        actor=user.display_name,
+        role=user.role,
+        action="USER_LOGIN_SUCCESS",
+        endpoint="/api/v1/auth/login",
+        method="POST",
+        status="GRANTED",
+        client_ip=client_ip
+    )
+
+    return AuthResponse(
+        user_id=f"USR-{user.id}",
+        db_user_id=user.id,
+        username=user.username,
+        display_name=user.display_name,
+        email=user.email or ident,
+        role=user.role,
+        permissions=permissions,
+        message="Login successful"
+    )
 
 
 @router.get("/me", response_model=AuthUser)

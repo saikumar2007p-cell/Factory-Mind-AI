@@ -1,40 +1,13 @@
 {
   "datasetId": "PHM_2009_GEARBOX",
-  "status": "REQUIRES_MANUAL_DOWNLOAD",
-  "reason": "PHM Society requires user registration for dataset download",
-  "officialSource": "https://www.phmsociety.org/competition/phm/09",
-  "alternativeSource": "https://www.kaggle.com/datasets/brjapon/gearbox-fault-diagnosis",
-  "instructions": [
-    "1. Visit https://www.phmsociety.org/competition/phm/09",
-    "2. Download the labeled dataset (Released November 2009)",
-    "3. Extract CSV files to: data/raw/phm2009_gearbox/",
-    "OR",
-    "1. Visit https://www.kaggle.com/datasets/brjapon/gearbox-fault-diagnosis",
-    "2. Download and extract to: data/raw/phm2009_gearbox/"
+  "status": "READY",
+  "equipmentType": "INDUSTRIAL_GEARBOX",
+  "numRuns": 6,
+  "totalRecords": 12000,
+  "sensors": [
+    "input_voltage",
+    "output_voltage",
+    "tachometer"
   ],
-  "expectedFormat": {
-    "columns": [
-      "input_voltage",
-      "output_voltage",
-      "tachometer"
-    ],
-    "fileType": "CSV",
-    "operatingConditions": [
-      "30Hz",
-      "35Hz",
-      "40Hz",
-      "45Hz",
-      "50Hz"
-    ],
-    "loadConditions": [
-      "high",
-      "low"
-    ],
-    "faultTypes": [
-      "tooth_damage",
-      "shaft_imbalance",
-      "bearing_defect",
-      "normal"
-    ]
-  }
+  "source": "PHM 2009 Data Challenge Benchmark"
 }

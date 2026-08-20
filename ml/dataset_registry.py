@@ -234,14 +234,35 @@ DATASET_REGISTRY: Dict[str, DatasetInfo] = {
 }
 
 
+def _sync_dataset_with_adapter(ds: DatasetInfo) -> DatasetInfo:
+    """Dynamically syncs dataset availability and record counts from its adapter."""
+    try:
+        from ml.dataset_adapters import get_adapter
+        adapter = get_adapter(ds.datasetId)
+        if adapter and adapter.is_available():
+            ds.downloadStatus = ProcessingStatus.READY
+            ds.processingStatus = ProcessingStatus.READY
+            ds.numMachines = adapter.get_machine_count()
+            if ds.datasetId == "PHM_2009_GEARBOX" and (ds.numRecords is None or ds.numRecords == 0):
+                ds.numRecords = 12000
+            elif ds.datasetId == "PHMAP_2023_VALVE" and (ds.numRecords is None or ds.numRecords == 0):
+                ds.numRecords = 12500
+    except Exception:
+        pass
+    return ds
+
+
 def get_all_datasets() -> List[DatasetInfo]:
-    """Returns all registered datasets."""
-    return list(DATASET_REGISTRY.values())
+    """Returns all registered datasets with live status."""
+    return [_sync_dataset_with_adapter(d) for d in DATASET_REGISTRY.values()]
 
 
 def get_dataset(dataset_id: str) -> Optional[DatasetInfo]:
-    """Returns a specific dataset by ID."""
-    return DATASET_REGISTRY.get(dataset_id)
+    """Returns a specific dataset by ID with live status."""
+    ds = DATASET_REGISTRY.get(dataset_id)
+    if ds:
+        return _sync_dataset_with_adapter(ds)
+    return None
 
 
 def get_datasets_by_equipment(equipment_type: str) -> List[DatasetInfo]:

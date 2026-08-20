@@ -16,7 +16,8 @@ import {
   FileText,
   Layers,
   ArrowRight,
-  Info
+  Info,
+  Lock
 } from 'lucide-react';
 import {
   getDataSources,
@@ -35,6 +36,25 @@ import MachineRegistrationQueue from './MachineRegistrationQueue';
 import DatasetSelector from '../Datasets/DatasetSelector';
 
 export default function SettingsView({ userRole = 'ADMIN' }) {
+  if (userRole !== 'ADMIN') {
+    return (
+      <div className="card" style={{ padding: '60px 40px', textAlign: 'center', maxWidth: '580px', margin: '60px auto', borderTop: '4px solid #dc2626' }}>
+        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#fef2f2', border: '2px solid #fca5a5', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto' }}>
+          <Lock size={32} color="#dc2626" />
+        </div>
+        <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#991b1b', marginBottom: '8px' }}>
+          Administrator Access Required
+        </h2>
+        <p style={{ fontSize: '14px', color: '#64748b', lineHeight: 1.6, marginBottom: '24px' }}>
+          Platform Settings, Data Connectors, User Management, Model Deployments, and Machine Registration Queues are strictly restricted to <strong>Administrator</strong> accounts.
+        </p>
+        <div style={{ display: 'inline-block', padding: '6px 14px', borderRadius: '6px', background: '#f1f5f9', border: '1px solid #cbd5e1', fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+          Current Role: <strong>{userRole}</strong> (Access Denied)
+        </div>
+      </div>
+    );
+  }
+
   const [activeTab, setActiveTab] = useState('datasets'); // 'datasets' | 'connectors' | 'models' | 'registrations' | 'users' | 'security'
   const [sources, setSources] = useState([]);
   const [activeSource, setActiveSource] = useState(null);

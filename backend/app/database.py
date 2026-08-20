@@ -89,6 +89,7 @@ async def init_db(db_url: Optional[str] = None):
             "ALTER TABLE predictions ADD COLUMN confidence_reason VARCHAR(500)",
             "ALTER TABLE telemetry ADD COLUMN data_source_type VARCHAR(20) DEFAULT 'CMAPSS'",
             "ALTER TABLE telemetry ADD COLUMN sensor_data JSON",
+            "ALTER TABLE users ADD COLUMN password_hash VARCHAR(255)",
         ]
         from sqlalchemy import text
         for stmt in migration_statements:

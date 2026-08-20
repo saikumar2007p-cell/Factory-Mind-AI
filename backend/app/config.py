@@ -60,6 +60,7 @@ class Settings(BaseSettings):
             url_str = url.strip()
             if url_str.startswith("postgresql://") or url_str.startswith("postgres://") or url_str.startswith("postgresql+asyncpg://"):
                 try:
+                    # pyrefly: ignore [missing-import]
                     import asyncpg
                     return url_str.replace("postgresql://", "postgresql+asyncpg://").replace("postgres://", "postgresql+asyncpg://")
                 except ImportError:

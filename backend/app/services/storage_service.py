@@ -5,6 +5,7 @@ Asynchronous Storage & Repository Service for FactoryMind AI.
 Provides clean abstraction for persisting and querying machines, telemetry, predictions, anomalies, alerts, and recommendations.
 """
 
+from ast import Tuple
 from datetime import datetime, timezone
 from typing import List, Dict, Optional, Any, Union
 import numpy as np
@@ -111,10 +112,10 @@ class StorageService:
 
     async def insert_telemetry_single(self, machine_id: int, row_data: Dict[str, Any]) -> Telemetry:
         """Inserts a single cycle telemetry record."""
-        sensor_kwargs = {f"s_{i}": float(row_data[f"s_{i}"]) for i in range(1, 22)}
+        sensor_kwargs = {f"s_{i}": float(row_data.get(f"s_{i}", 0.0) or 0.0) for i in range(1, 22)}
         telemetry = Telemetry(
             machine_id=machine_id,
-            cycle=int(row_data["time_cycle"] if "time_cycle" in row_data else row_data["cycle"]),
+            cycle=int(row_data["time_cycle"] if "time_cycle" in row_data else row_data.get("cycle", 1)),
             setting_1=float(row_data.get("setting_1", 0.0)),
             setting_2=float(row_data.get("setting_2", 0.0)),
             setting_3=float(row_data.get("setting_3", 100.0)),
@@ -128,8 +129,8 @@ class StorageService:
         """Inserts multiple telemetry records in bulk."""
         objects = []
         for r in records:
-            cycle_val = int(r["time_cycle"] if "time_cycle" in r else r["cycle"])
-            sensor_kwargs = {f"s_{i}": float(r[f"s_{i}"]) for i in range(1, 22)}
+            cycle_val = int(r["time_cycle"] if "time_cycle" in r else r.get("cycle", 1))
+            sensor_kwargs = {f"s_{i}": float(r.get(f"s_{i}", 0.0) or 0.0) for i in range(1, 22)}
             t = Telemetry(
                 machine_id=machine_id,
                 cycle=cycle_val,

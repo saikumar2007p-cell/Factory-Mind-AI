@@ -178,9 +178,9 @@ async def generate_gemini_diagnosis(evidence: Dict[str, Any]) -> GeminiDiagnosti
     api_key = settings.GEMINI_API_KEY
     model_name = settings.effective_gemini_model
 
-    if not api_key or "your-gemini-api-key" in api_key:
-        logger.info("GEMINI_API_KEY is not configured. Utilizing deterministic diagnostic fallback.")
-        return generate_deterministic_fallback(evidence, reason="GEMINI_API_KEY not configured")
+    if not api_key or "your-gemini-api-key" in api_key or not api_key.startswith("AIzaSy"):
+        logger.info("Valid GEMINI_API_KEY (AIzaSy...) not detected. Utilizing deterministic evidence fallback.")
+        return generate_deterministic_fallback(evidence, reason="Deterministic Rules Engine Active")
 
     prompt = f"""EVIDENCE PAYLOAD (Engine Telemetry, Data Quality & ML Prognostics):
 ```json

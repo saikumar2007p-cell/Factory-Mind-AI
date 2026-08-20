@@ -29,21 +29,22 @@ import {
   getFleetMaintenanceLoad,
   getFleetSubsystems,
   getFleetAttentionRequired,
-  getFleetPlanning
+  getFleetPlanning,
+  getCached
 } from '../../services/api';
 
 export default function FleetIntelligenceView({ onSelectMachine, onNavigateTab, searchQuery: propSearchQuery }) {
-  const [loading, setLoading] = useState(true);
+  // API State with instant cache hydration
+  const [summary, setSummary] = useState(() => getCached('/fleet/summary'));
+  const [riskDist, setRiskDist] = useState(() => getCached('/fleet/risk-distribution'));
+  const [maintenanceLoad, setMaintenanceLoad] = useState(() => getCached('/fleet/maintenance-workload'));
+  const [subsystems, setSubsystems] = useState(() => getCached('/fleet/subsystems')?.subsystems || []);
+  const [attentionItems, setAttentionItems] = useState(() => getCached('/fleet/attention-required')?.items || []);
+  const [planningData, setPlanningData] = useState(() => getCached('/fleet/planning'));
+
+  const [loading, setLoading] = useState(() => !getCached('/fleet/summary'));
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
-
-  // API State
-  const [summary, setSummary] = useState(null);
-  const [riskDist, setRiskDist] = useState(null);
-  const [maintenanceLoad, setMaintenanceLoad] = useState(null);
-  const [subsystems, setSubsystems] = useState([]);
-  const [attentionItems, setAttentionItems] = useState([]);
-  const [planningData, setPlanningData] = useState(null);
 
   // Filter states
   const [planningFilter, setPlanningFilter] = useState('ALL');
@@ -51,8 +52,8 @@ export default function FleetIntelligenceView({ onSelectMachine, onNavigateTab, 
   const searchQuery = propSearchQuery !== undefined ? propSearchQuery : internalSearchQuery;
 
   const loadData = async (isRefresh = false, isSilent = false) => {
-    if (isSilent) {
-      // Background silent update — no spinner toggles to prevent UI flashing or state jumping
+    if (isSilent || summary) {
+      // Non-blocking background update — no spinner if data already visible
     } else if (isRefresh) {
       setRefreshing(true);
     } else {

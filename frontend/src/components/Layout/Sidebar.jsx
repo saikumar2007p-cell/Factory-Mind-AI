@@ -12,7 +12,8 @@ import {
   Layers,
   TrendingUp,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  LogOut
 } from 'lucide-react';
 
 export default function Sidebar({ 
@@ -20,9 +21,11 @@ export default function Sidebar({
   onSelectTab, 
   fleetSummary,
   isCollapsed = false,
-  onToggleCollapse
+  onToggleCollapse,
+  onLogout,
+  userRole = 'ADMIN'
 }) {
-  const navItems = [
+  const allNavItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'fleet', label: 'Fleet Intelligence', icon: Layers },
     { id: 'learning', label: 'Learning Intelligence', icon: TrendingUp },
@@ -32,8 +35,10 @@ export default function Sidebar({
     { id: 'maintenance', label: 'Maintenance', icon: Wrench },
     { id: 'production', label: 'Production', icon: Activity },
     { id: 'documents', label: 'Documents', icon: FileText },
-    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'settings', label: 'Settings', icon: Settings, adminOnly: true },
   ];
+
+  const navItems = allNavItems.filter(item => !item.adminOnly || userRole === 'ADMIN');
 
   return (
     <aside className={`app-sidebar ${isCollapsed ? 'collapsed' : ''}`}>
@@ -128,6 +133,33 @@ export default function Sidebar({
               );
             })()}
           </div>
+
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              style={{
+                width: '100%',
+                marginTop: '10px',
+                padding: '8px 12px',
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                borderRadius: '8px',
+                color: '#f87171',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                transition: 'all 0.15s ease'
+              }}
+              title="Sign Out of FactoryMind AI"
+            >
+              <LogOut size={14} />
+              <span>Sign Out</span>
+            </button>
+          )}
         </div>
       )}
     </aside>
