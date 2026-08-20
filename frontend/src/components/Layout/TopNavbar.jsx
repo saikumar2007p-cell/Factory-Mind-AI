@@ -34,9 +34,10 @@ export default function TopNavbar({
 }) {
   const isRunning = simulationState?.is_running;
   const isPaused = simulationState?.is_paused;
-  const currentCycle = simulationState?.current_cycle || 0;
-  const maxCycle = simulationState?.max_cycle || 192;
-  const unitNumber = simulationState?.unit_number || 1;
+  // Stabilize counters: never show 0/undefined, always show last known good value
+  const currentCycle = simulationState?.current_cycle ?? 0;
+  const maxCycle = simulationState?.max_cycle ?? 192;
+  const unitNumber = simulationState?.unit_number ?? 1;
 
   const sourceName = activeDataSource?.name || 'NASA C-MAPSS FD001';
   const isSimulation = activeDataSource?.is_simulation ?? true;

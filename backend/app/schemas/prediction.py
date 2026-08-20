@@ -37,7 +37,7 @@ class PredictionResponse(BaseModel):
     id: Optional[int] = None
     machine_id: int
     cycle: int
-    rul_estimate: float
+    rul_estimate: Optional[float] = None      # None when capability < FULL_RUL
     anomaly_score: float
     anomaly_status: str
     health_index: float
@@ -46,6 +46,11 @@ class PredictionResponse(BaseModel):
     model_version: str
     contributing_signals: Optional[List[Dict[str, Any]]] = None
     trends: Optional[List[Dict[str, Any]]] = None
+    # Phase 2: Prediction confidence / uncertainty
+    confidence_level: Optional[str] = None     # HIGH | MEDIUM | LOW | INSUFFICIENT_DATA
+    confidence_score: Optional[float] = None   # 0.0 – 1.0
+    out_of_distribution_sensors: Optional[List[str]] = None
+    confidence_reason: Optional[str] = None
     created_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)

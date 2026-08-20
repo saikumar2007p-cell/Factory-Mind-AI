@@ -261,6 +261,86 @@ export const switchAuthRole = (role, actorName = null) => request('/auth/switch-
 export const getSecurityLogs = (limit = 100) => request(`/auth/security-audit-logs?limit=${limit}`);
 export const clearAuthSession = () => request('/auth/clear-session', { method: 'POST' });
 
+// ============================================================================
+// PHASE 2 HARDENING APIS
+// ============================================================================
+
+// Model Version Registry & Rollback
+export const getModelVersions = (machineId = null, statusFilter = null) => {
+  let query = '';
+  const params = [];
+  if (machineId) params.push(`machine_id=${machineId}`);
+  if (statusFilter) params.push(`status_filter=${statusFilter}`);
+  if (params.length) query = `?${params.join('&')}`;
+  return request(`/model-versions${query}`);
+};
+export const getActiveModelVersion = (machineId) => request(`/model-versions/machine/${machineId}/active`);
+export const getRollbackCandidates = (machineId) => request(`/model-versions/machine/${machineId}/rollback-candidates`);
+export const registerModelCandidate = (payload) => request('/model-versions', {
+  method: 'POST',
+  body: JSON.stringify(payload)
+});
+export const approveModelVersion = (versionId, approvedBy, notes = null) => request(`/model-versions/${versionId}/approve`, {
+  method: 'POST',
+  body: JSON.stringify({ approved_by: approvedBy, notes })
+});
+export const rollbackModelVersion = (machineId, rollbackReason, rolledBackBy) => request(`/model-versions/machine/${machineId}/rollback`, {
+  method: 'POST',
+  body: JSON.stringify({ rollback_reason: rollbackReason, rolled_back_by: rolledBackBy })
+});
+
+// Behavioral Change & Drift Detection
+export const getBehavioralChanges = (machineId, statusFilter = null) => {
+  const query = statusFilter ? `?investigation_status=${statusFilter}` : '';
+  return request(`/drift/machine/${machineId}${query}`);
+};
+export const getFleetPendingChanges = () => request('/drift/fleet/pending');
+export const investigateBehavioralChange = (changeId, payload) => request(`/drift/${changeId}/investigate`, {
+  method: 'POST',
+  body: JSON.stringify(payload)
+});
+
+// Ground-Truth Maintenance Outcomes
+export const getOutcomes = (limit = 50) => request(`/outcomes?limit=${limit}`);
+export const getMachineOutcomes = (machineId) => request(`/outcomes/machine/${machineId}`);
+export const getModelPerformance = () => request('/outcomes/performance');
+export const getRetrainingCandidates = () => request('/outcomes/retraining-candidates');
+export const recordOutcome = (payload) => request('/outcomes', {
+  method: 'POST',
+  body: JSON.stringify(payload)
+});
+
+// Named User Management (Multi-Admin)
+export const getUsers = () => request('/users');
+export const getMyUser = () => request('/users/me');
+export const createUser = (payload) => request('/users', {
+  method: 'POST',
+  body: JSON.stringify(payload)
+});
+export const updateUserRole = (userId, newRole) => request(`/users/${userId}/role`, {
+  method: 'PATCH',
+  body: JSON.stringify({ new_role: newRole })
+});
+export const deactivateUser = (userId) => request(`/users/${userId}`, {
+  method: 'DELETE'
+});
+
+// Machine Registration Review Gate
+export const getMachineRegistrations = (statusFilter = null) => {
+  const query = statusFilter ? `?status_filter=${statusFilter}` : '';
+  return request(`/machine-registrations${query}`);
+};
+export const getPendingRegistrations = () => request('/machine-registrations/pending');
+export const getPendingRegistrationCount = () => request('/machine-registrations/count-pending');
+export const approveMachineRegistration = (requestId, payload) => request(`/machine-registrations/${requestId}/approve`, {
+  method: 'POST',
+  body: JSON.stringify(payload)
+});
+export const rejectMachineRegistration = (requestId, payload) => request(`/machine-registrations/${requestId}/reject`, {
+  method: 'POST',
+  body: JSON.stringify(payload)
+});
+
 // WebSocket Live Stream Connection
 export function createWebSocketStream(onMessage, onStatusChange) {
   let socket = null;

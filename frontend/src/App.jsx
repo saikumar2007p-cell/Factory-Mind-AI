@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './styles/theme.css';
 import Sidebar from './components/Layout/Sidebar';
 import TopNavbar from './components/Layout/TopNavbar';
@@ -14,6 +14,7 @@ import ProductionView from './components/Production/ProductionView';
 import DocumentsView from './components/Documents/DocumentsView';
 import SettingsView from './components/Settings/SettingsView';
 import RoleAuthModal from './components/Layout/RoleAuthModal';
+import LoginPage from './components/Layout/LoginPage';
 
 import {
   getMachines,
@@ -40,6 +41,12 @@ export default function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
 
+  // Login gate — show LoginPage until user authenticates
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    const sess = getUserSession();
+    return !!sess.role && !!sess.actor;
+  });
+
   // Stage 11 User Session & RBAC State
   const [userSession, setUserSessionState] = useState(() => getUserSession());
   const userRole = userSession?.role || 'ADMIN';
@@ -51,6 +58,17 @@ export default function App() {
     setUserSessionState(updated);
   };
 
+  const handleLogin = (role, actor) => {
+    setUserSession(role, actor);
+    setUserSessionState(getUserSession());
+    setIsLoggedIn(true);
+  };
+
+  // Show login page first
+  if (!isLoggedIn) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
+
   // Data State
   const [fleetSummary, setFleetSummary] = useState(null);
   const [machines, setMachines] = useState([]);
@@ -61,6 +79,7 @@ export default function App() {
   const [latestDiagnosis, setLatestDiagnosis] = useState(null);
   const [diagnosticsLoading, setDiagnosticsLoading] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
+  const wsConnectedRef = useRef(false);
   const [backendOffline, setBackendOffline] = useState(false);
 
   // Initial Data Load
@@ -85,7 +104,23 @@ export default function App() {
         setAlerts(aRes.value.alerts || []);
       }
       if (sRes.status === 'fulfilled') {
-        setSimulationState(sRes.value);
+        // Only update cycle/unit from REST if WebSocket is NOT connected
+        // — prevents the counter from glitching when WS is live
+        setSimulationState(prev => {
+          const restState = sRes.value;
+          if (wsConnectedRef.current && prev) {
+            // Keep WS-tracked live values; only update non-live fields
+            return {
+              ...restState,
+              current_cycle: prev.current_cycle,
+              unit_number: prev.unit_number,
+              max_cycle: prev.max_cycle,
+              is_running: prev.is_running,
+              is_paused: prev.is_paused,
+            };
+          }
+          return restState;
+        });
       }
       if (dRes.status === 'fulfilled') {
         setActiveDataSource(dRes.value);
@@ -123,7 +158,9 @@ export default function App() {
         }
       },
       (status) => {
-        setWsConnected(status === 'CONNECTED');
+        const connected = status === 'CONNECTED';
+        wsConnectedRef.current = connected;
+        setWsConnected(connected);
       }
     );
 

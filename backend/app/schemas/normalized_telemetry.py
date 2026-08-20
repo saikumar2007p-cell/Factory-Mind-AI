@@ -35,7 +35,11 @@ class DataSourceStatus(str, Enum):
 
 
 class MLCompatibilityStatus(str, Enum):
-    COMPATIBLE = "COMPATIBLE"
+    COMPATIBLE = "COMPATIBLE"               # Legacy: C-MAPSS full 21/21
+    FULL_RUL = "FULL_RUL"                   # Complete RUL + anomaly prediction possible
+    PARTIAL_RUL = "PARTIAL_RUL"             # RUL possible with reduced accuracy
+    ANOMALY_ONLY = "ANOMALY_ONLY"           # Only anomaly detection possible
+    BASELINE_ONLY = "BASELINE_ONLY"         # Only baseline behaviour characterisation possible
     PARTIALLY_COMPATIBLE = "PARTIALLY_COMPATIBLE"
     INCOMPATIBLE = "INCOMPATIBLE"
     INSUFFICIENT_DATA = "INSUFFICIENT_DATA"
@@ -78,6 +82,9 @@ class MLCompatibilityReport(BaseModel):
     is_rul_predictable: bool
     is_anomaly_detectable: bool
     message: str
+    # Tiered capability assessment (Phase 2)
+    capability_tier: Optional[str] = None   # FULL_RUL | PARTIAL_RUL | ANOMALY_ONLY | BASELINE_ONLY | INSUFFICIENT
+    coverage_score: Optional[float] = None  # 0.0–1.0 fraction of critical features available
     evaluated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -151,6 +158,17 @@ class TelemetryIngestResponse(BaseModel):
     inference_result: Optional[Dict[str, Any]] = None
 
 
+class MachineRegistrationRequestSummary(BaseModel):
+    """Lightweight summary of a pending machine registration request."""
+    request_id: int
+    requested_machine_id: str
+    source_filename: Optional[str] = None
+    source_row_count: Optional[int] = None
+    detected_columns: Optional[List[str]] = None
+    status: str = "PENDING_REVIEW"
+    requested_at: Optional[datetime] = None
+
+
 class FileUploadIngestResponse(BaseModel):
     filename: str
     total_rows: int
@@ -162,4 +180,5 @@ class FileUploadIngestResponse(BaseModel):
     ml_compatibility: MLCompatibilityReport
     sample_normalized_frames: List[NormalizedTelemetryFrame]
     quarantine_errors: List[str]
-
+    # Phase 2: unknown machines staged for admin review instead of auto-created
+    pending_machine_reviews: List[MachineRegistrationRequestSummary] = Field(default_factory=list)

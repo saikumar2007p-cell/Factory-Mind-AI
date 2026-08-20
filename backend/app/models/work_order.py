@@ -50,6 +50,7 @@ class WorkOrder(Base):
     alert = relationship("Alert", back_populates="work_orders")
     recommendation = relationship("Recommendation", back_populates="work_orders")
     audit_logs = relationship("WorkOrderAuditLog", back_populates="work_order", cascade="all, delete-orphan", order_by="WorkOrderAuditLog.timestamp.asc()", lazy="selectin")
+    maintenance_outcome = relationship("MaintenanceOutcome", back_populates="work_order", uselist=False, cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("ix_wo_machine_status", "machine_id", "status"),

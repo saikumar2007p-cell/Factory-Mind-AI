@@ -30,6 +30,7 @@ class UserRole(str, Enum):
 
 class AuthUser(BaseModel):
     user_id: str = "USR-DEV-001"
+    db_user_id: Optional[int] = None
     username: str = "Factory Engineer"
     role: UserRole = UserRole.OPERATOR
     permissions: List[str] = Field(default_factory=list)

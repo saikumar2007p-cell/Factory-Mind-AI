@@ -89,7 +89,10 @@ export default function ContinuousLearningView({ onSelectMachine, onNavigateTab,
 
   useEffect(() => {
     loadData();
-  }, [latestLiveFrame]);
+    // Refresh every 30 seconds — NOT on every WS tick to prevent UI glitching
+    const interval = setInterval(loadData, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const q = (searchQuery || searchTerm || '').trim().toLowerCase();
 

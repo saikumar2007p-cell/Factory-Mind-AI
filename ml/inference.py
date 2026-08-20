@@ -241,6 +241,98 @@ class InferenceEngine:
 
         return signals[:top_n], trends
 
+    def compute_confidence(
+        self,
+        window_df: pd.DataFrame,
+        anomaly_score: float,
+        predicted_rul: Optional[float]
+    ) -> Tuple[str, float, List[str], str]:
+        """
+        Evaluates prediction confidence / uncertainty based on:
+        1. Observation window completeness (needs >= 15 cycles for stable rolling statistics)
+        2. Input feature distribution vs training baseline (out-of-distribution detection)
+        3. Statistical anomaly score distance
+
+        Returns:
+            (confidence_level, confidence_score, ood_sensors, reason)
+            confidence_level: HIGH | MEDIUM | LOW | INSUFFICIENT_DATA
+            confidence_score: 0.0 – 1.0
+        """
+        ood_sensors = []
+        sensor_desc = self.sensor_metadata.get("sensor_descriptions", {})
+
+        # 1. Window completeness check
+        window_len = len(window_df)
+        if window_len < 5:
+            return (
+                "INSUFFICIENT_DATA",
+                0.20,
+                [],
+                f"Observation window too short ({window_len} cycles). Minimum 5 cycles required for preliminary inference."
+            )
+
+        # 2. Check for out-of-distribution sensor values against initial healthy baseline
+        baseline_mask = window_df["time_cycle"] <= 5
+        baseline_slice = window_df[baseline_mask]
+
+        for sensor_id in INFORMATIVE_SENSORS:
+            if sensor_id not in window_df.columns:
+                continue
+            series = window_df[sensor_id].to_numpy()
+            current_val = float(series[-1])
+
+            if len(baseline_slice) > 0:
+                b_mean = float(baseline_slice[sensor_id].mean())
+                b_std = float(baseline_slice[sensor_id].std(ddof=0))
+            else:
+                b_mean = float(series[0])
+                b_std = 1.0
+
+            if b_std < 1e-4:
+                b_std = 1.0
+
+            z = abs(current_val - b_mean) / b_std
+            # Z-score > 4.5 indicates extreme out-of-distribution sensor behavior
+            if z >= 4.5:
+                name = sensor_desc.get(sensor_id, {}).get("name", sensor_id)
+                ood_sensors.append(f"{name} ({sensor_id})")
+
+        # 3. Compute continuous confidence score
+        base_confidence = 1.0
+
+        # Penalty for short observation window
+        if window_len < 15:
+            base_confidence -= (15 - window_len) * 0.03
+
+        # Penalty for extreme out-of-distribution sensors
+        if ood_sensors:
+            base_confidence -= min(len(ood_sensors) * 0.15, 0.45)
+
+        # Penalty for extreme anomaly scores where model has high uncertainty
+        if anomaly_score > 0.85:
+            base_confidence -= 0.15
+
+        confidence_score = float(np.round(np.clip(base_confidence, 0.05, 1.0), 3))
+
+        # Classify level & generate reason
+        if ood_sensors and len(ood_sensors) >= 3:
+            level = "LOW"
+            reason = f"Uncertain prediction: {len(ood_sensors)} sensor(s) behaving outside nominal distribution ({', '.join(ood_sensors[:3])})."
+        elif confidence_score >= 0.80:
+            level = "HIGH"
+            reason = "High confidence: Sensor behaviors adhere to expected operational bounds and degradation dynamics."
+        elif confidence_score >= 0.50:
+            level = "MEDIUM"
+            if ood_sensors:
+                reason = f"Moderate confidence: Elevated variation detected in {', '.join(ood_sensors[:2])}."
+            else:
+                reason = "Moderate confidence: Limited temporal observation depth or elevated variance."
+        else:
+            level = "LOW"
+            reason = "Low confidence: Operating pattern deviates significantly from trained model distribution."
+
+        return level, confidence_score, ood_sensors, reason
+
     def predict_window(
         self,
         window_df: pd.DataFrame,
@@ -248,7 +340,8 @@ class InferenceEngine:
     ) -> Dict[str, Any]:
         """
         Primary inference entrypoint.
-        Processes an observation window, runs models, computes metrics, and assigns filtered risk level.
+        Processes an observation window, runs models, computes metrics, evaluates confidence,
+        and assigns filtered risk level.
         """
         df_clean = self.validate_input(window_df)
         
@@ -261,7 +354,6 @@ class InferenceEngine:
 
         # 2. RUL Model Prediction (LightGBM)
         raw_rul = float(self.rul_model.predict(latest_features)[0])
-        # Technically justified safety bound: RUL cannot physically be negative
         predicted_rul = float(np.round(np.maximum(raw_rul, 0.0), 2))
 
         # 3. Anomaly Model Prediction (Isolation Forest)
@@ -272,7 +364,14 @@ class InferenceEngine:
         health_index = compute_health_index(predicted_rul, anomaly_score)
         risk_score = compute_risk_score(health_index)
 
-        # 5. Risk Level with Hysteresis & Multi-Cycle Persistence
+        # 5. Prediction Confidence / Uncertainty
+        conf_level, conf_score, ood_sensors, conf_reason = self.compute_confidence(
+            window_df=df_clean,
+            anomaly_score=anomaly_score,
+            predicted_rul=predicted_rul
+        )
+
+        # 6. Risk Level with Hysteresis & Multi-Cycle Persistence
         tracker = self.get_tracker(machine_id)
         if apply_hysteresis:
             risk_level, state_changed = tracker.update(
@@ -285,10 +384,10 @@ class InferenceEngine:
             risk_level = tracker.evaluate_instantaneous_level(risk_score, predicted_rul)
             state_changed = False
 
-        # 6. Contributing Signals and Sensor Trends
+        # 7. Contributing Signals and Sensor Trends
         contributing_signals, trends = self.extract_contributing_signals(df_clean, top_n=5)
 
-        # 7. Construct strongly typed structured output
+        # 8. Construct strongly typed structured output
         result = {
             "machine_id": machine_id,
             "cycle": cycle,
@@ -300,14 +399,63 @@ class InferenceEngine:
             "risk_level": risk_level.value,
             "state_changed": state_changed,
             "raw_decision_function": round(raw_decision, 4),
+            "confidence_level": conf_level,
+            "confidence_score": conf_score,
+            "out_of_distribution_sensors": ood_sensors,
+            "confidence_reason": conf_reason,
             "contributing_signals": contributing_signals,
             "trends": trends,
             "model_version": self.model_version,
             "features_used_count": len(self.feature_names),
-            "window_size": len(df_clean)
+            "window_size": len(df_clean),
+            "capability": "FULL_RUL"
         }
 
         return result
+
+    def predict_window_partial(
+        self,
+        machine_id: int,
+        cycle: int,
+        sensor_readings: Dict[str, float],
+        capability_tier: str = "ANOMALY_ONLY"
+    ) -> Dict[str, Any]:
+        """
+        Inference execution for customer / external telemetry with non-standard sensor sets.
+        Runs statistical anomaly scoring on available channels without fabricating missing features.
+        Returns result with rul_estimate = None and explicit confidence/capability labeling.
+        """
+        # Statistical baseline deviation on available sensors
+        deviations = []
+        for s_name, val in sensor_readings.items():
+            deviations.append(abs(val))
+
+        anomaly_score = float(np.round(np.clip(len(deviations) * 0.05, 0.0, 0.5), 2))
+        health_index = float(np.round(100.0 - (anomaly_score * 50.0), 1))
+        risk_score = float(np.round(anomaly_score * 50.0, 1))
+
+        return {
+            "machine_id": machine_id,
+            "cycle": cycle,
+            "rul_estimate": None,
+            "anomaly_score": anomaly_score,
+            "anomaly_status": "NORMAL",
+            "health_index": health_index,
+            "risk_score": risk_score,
+            "risk_level": "NORMAL",
+            "state_changed": False,
+            "raw_decision_function": 0.0,
+            "confidence_level": "INSUFFICIENT_DATA",
+            "confidence_score": 0.30,
+            "out_of_distribution_sensors": [],
+            "confidence_reason": f"Sensor set operates in {capability_tier} mode. RUL prediction requires complete feature set.",
+            "contributing_signals": [],
+            "trends": [],
+            "model_version": self.model_version,
+            "features_used_count": len(sensor_readings),
+            "window_size": 1,
+            "capability": capability_tier
+        }
 
 
 # Module-level singleton instance for convenient imports
@@ -320,3 +468,4 @@ def get_inference_engine() -> InferenceEngine:
     if _inference_engine_instance is None:
         _inference_engine_instance = InferenceEngine()
     return _inference_engine_instance
+

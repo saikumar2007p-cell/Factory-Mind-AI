@@ -35,7 +35,12 @@ from backend.app.routers import (
     work_orders,
     fleet,
     continuous_learning,
-    auth
+    auth,
+    model_versions,
+    drift,
+    outcomes,
+    users,
+    machine_registrations
 )
 
 # Logging configuration
@@ -56,6 +61,40 @@ async def lifespan(app: FastAPI):
     try:
         await init_db()
         logger.info("Database initialized successfully.")
+
+        # Seed initial default admin and operator users if empty
+        from backend.app.database import AsyncSessionLocal
+        from backend.app.services.user_service import UserService
+        from backend.app.services.telemetry_state import TelemetryStateService
+
+        async with AsyncSessionLocal() as session:
+            user_svc = UserService(session)
+            admin_count = await user_svc.get_active_admin_count()
+            if admin_count == 0:
+                await user_svc.create_user(
+                    username="admin",
+                    display_name="System Administrator (Alice)",
+                    role="ADMIN",
+                    email="admin@factorymind.ai",
+                    created_by="SYSTEM_INIT",
+                    notes="Default platform administrator"
+                )
+                await user_svc.create_user(
+                    username="operator",
+                    display_name="Operations Engineer (Bob)",
+                    role="OPERATOR",
+                    email="operator@factorymind.ai",
+                    created_by="SYSTEM_INIT",
+                    notes="Default platform operations engineer"
+                )
+                await session.commit()
+                logger.info("Seeded default named Administrator and Operator users.")
+
+            # Refresh telemetry freshness states on startup
+            tel_svc = TelemetryStateService(session)
+            state_counts = await tel_svc.refresh_all_machine_states()
+            await session.commit()
+            logger.info(f"Startup machine telemetry state refresh completed: {state_counts}")
     except Exception as e:
         logger.error(f"Database initialization error: {e}", exc_info=True)
 
@@ -107,16 +146,22 @@ async def global_exception_handler(request, exc):
 # Register REST Routers under /api/v1
 api_v1_prefix = "/api/v1"
 app.include_router(auth.router, prefix=api_v1_prefix)
+app.include_router(users.router, prefix=api_v1_prefix)
 app.include_router(machines.router, prefix=api_v1_prefix)
+app.include_router(machine_registrations.router, prefix=api_v1_prefix)
 app.include_router(telemetry.router, prefix=api_v1_prefix)
 app.include_router(predictions.router, prefix=api_v1_prefix)
+app.include_router(model_versions.router, prefix=api_v1_prefix)
 app.include_router(simulation.router, prefix=api_v1_prefix)
 app.include_router(alerts.router, prefix=api_v1_prefix)
+app.include_router(drift.router, prefix=api_v1_prefix)
 app.include_router(diagnostics.router, prefix=api_v1_prefix)
 app.include_router(sources.router, prefix=api_v1_prefix)
 app.include_router(work_orders.router, prefix=api_v1_prefix)
+app.include_router(outcomes.router, prefix=api_v1_prefix)
 app.include_router(fleet.router, prefix=api_v1_prefix)
 app.include_router(continuous_learning.router, prefix=api_v1_prefix)
+
 
 
 @app.get("/health", tags=["Health"])

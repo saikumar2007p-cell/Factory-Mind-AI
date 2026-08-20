@@ -27,10 +27,18 @@ class Prediction(Base):
     contributing_signals = Column(JSON, nullable=True)
     trends = Column(JSON, nullable=True)
 
+    # --- Prediction confidence / uncertainty (added Phase 2) ---
+    # confidence_level: HIGH | MEDIUM | LOW | INSUFFICIENT_DATA
+    confidence_level = Column(String(25), nullable=True)
+    confidence_score = Column(Float, nullable=True)            # 0.0 (no confidence) – 1.0 (full confidence)
+    out_of_distribution_sensors = Column(JSON, nullable=True)  # list of sensor names outside training range
+    confidence_reason = Column(String(500), nullable=True)     # human-readable explanation
+
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     # Relationships
     machine = relationship("Machine", back_populates="predictions")
+    maintenance_outcomes = relationship("MaintenanceOutcome", foreign_keys="[MaintenanceOutcome.linked_prediction_id]")
 
     __table_args__ = (
         Index("ix_prediction_machine_cycle", "machine_id", "cycle"),
@@ -50,5 +58,9 @@ class Prediction(Base):
             "model_version": self.model_version,
             "contributing_signals": self.contributing_signals,
             "trends": self.trends,
+            "confidence_level": self.confidence_level,
+            "confidence_score": self.confidence_score,
+            "out_of_distribution_sensors": self.out_of_distribution_sensors,
+            "confidence_reason": self.confidence_reason,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }

@@ -11,6 +11,11 @@ from backend.app.models.anomaly import Anomaly
 from backend.app.models.alert import Alert
 from backend.app.models.recommendation import Recommendation
 from backend.app.models.work_order import WorkOrder, WorkOrderAuditLog
+from backend.app.models.model_version import ModelVersion
+from backend.app.models.behavioral_change import BehavioralChange
+from backend.app.models.maintenance_outcome import MaintenanceOutcome
+from backend.app.models.user import User
+from backend.app.models.machine_registration_request import MachineRegistrationRequest
 
 __all__ = [
     "Machine",
@@ -21,4 +26,9 @@ __all__ = [
     "Recommendation",
     "WorkOrder",
     "WorkOrderAuditLog",
+    "ModelVersion",
+    "BehavioralChange",
+    "MaintenanceOutcome",
+    "User",
+    "MachineRegistrationRequest",
 ]

@@ -28,6 +28,8 @@ from backend.app.services.sensor_mapping import get_sensor_mapping_service
 from backend.app.services.ml_compatibility import get_ml_compatibility_service
 
 from backend.app.security import AuthUser, require_role
+from backend.app.database import get_db
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/sources", tags=["Data Sources & Ingestion"])
 
@@ -158,11 +160,13 @@ async def ingest_telemetry_frame(request: TelemetryIngestRequest):
 @router.post("/upload-file", response_model=FileUploadIngestResponse)
 async def upload_telemetry_file(
     file: UploadFile = File(...),
-    default_machine_id: str = Form("EXT_UNIT_01")
+    default_machine_id: str = Form("EXT_UNIT_01"),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Uploads a batch CSV/TSV telemetry file, parses columns, maps channels,
-    evaluates data quality, and validates prognostic ML compatibility.
+    evaluates data quality, validates prognostic ML compatibility,
+    and stages unknown machine registrations for Administrator review.
     """
     if not file.filename.endswith((".csv", ".tsv", ".txt")):
         raise HTTPException(
@@ -184,6 +188,58 @@ async def upload_telemetry_file(
             filename=file.filename,
             default_machine_id=default_machine_id
         )
+
+        # Check if the target machine exists in database; if unknown, stage for admin review
+        from backend.app.services.storage_service import StorageService
+        from backend.app.services.machine_registration_service import MachineRegistrationService
+        from backend.app.schemas.normalized_telemetry import MachineRegistrationRequestSummary
+
+        storage = StorageService(db)
+        reg_service = MachineRegistrationService(db)
+
+        # Check unit number if numeric or search by name
+        machine = None
+        if default_machine_id.isdigit():
+            machine = await storage.get_machine_by_unit(int(default_machine_id))
+        if not machine:
+            # Check all machines to match by name or unit
+            all_m = await storage.get_all_machines()
+            for m in all_m:
+                if str(m.unit_number) == str(default_machine_id) or m.name.lower() == default_machine_id.lower():
+                    machine = m
+                    break
+
+        pending_reviews = []
+        if not machine and result.valid_rows > 0:
+            # Stage for administrator review
+            sample_data_dicts = [
+                {
+                    "cycle": f.cycle,
+                    "readings": {k: v.value for k, v in f.readings.items()}
+                }
+                for f in result.sample_normalized_frames[:5]
+            ]
+            req = await reg_service.stage_upload_for_review(
+                requested_machine_id=default_machine_id,
+                source_filename=file.filename,
+                source_row_count=result.valid_rows,
+                detected_columns=result.detected_columns,
+                sample_data=sample_data_dicts
+            )
+            await db.commit()
+            pending_reviews.append(
+                MachineRegistrationRequestSummary(
+                    request_id=req.id,
+                    requested_machine_id=req.requested_machine_id,
+                    source_filename=req.source_filename,
+                    source_row_count=req.source_row_count,
+                    detected_columns=req.detected_columns,
+                    status=req.status,
+                    requested_at=req.requested_at
+                )
+            )
+
+        result.pending_machine_reviews = pending_reviews
         return result
     except Exception as e:
         raise HTTPException(
@@ -222,30 +278,23 @@ async def update_sensor_mappings(config: SensorMappingConfig):
 async def check_machine_ml_compatibility(machine_id: str):
     """
     Checks prognostic ML schema compatibility for a machine or current telemetry.
+    Supports both C-MAPSS 21-channel simulation and tiered customer sensor sets.
     """
     manager = get_data_source_manager()
     adapter = manager.get_active_source()
-    
-    # If C-MAPSS simulation, always fully compatible 21/21
+    compat_service = get_ml_compatibility_service()
+
+    # If C-MAPSS simulation, evaluate full C-MAPSS compatibility
     if adapter.source_type == DataSourceType.CMAPSS_SIMULATION:
-        compat_service = get_ml_compatibility_service()
-        # Build dummy frame for C-MAPSS machine
         row_dict = {"unit_number": machine_id, "time_cycle": 1}
         for i in range(1, 22):
             row_dict[f"s_{i}"] = 500.0
         frame = manager.cmapss_adapter.convert_cmapss_row_to_frame(row_dict)
         return compat_service.evaluate_frame_compatibility(frame)
 
-    # For other sources, return report
-    compat_service = get_ml_compatibility_service()
-    report = MLCompatibilityReport(
+    # For customer / external sources, use tiered evaluation
+    return compat_service.evaluate_customer_frame_compatibility(
         machine_id=str(machine_id),
-        status=MLCompatibilityReport.__fields__["status"].default,
-        total_required_channels=21,
-        available_compatible_channels=0,
-        missing_channels=[f"s_{i}" for i in range(1, 22)],
-        is_rul_predictable=False,
-        is_anomaly_detectable=False,
-        message=f"Machine {machine_id} on active source '{adapter.name}' requires 21/21 channels for RUL prediction."
+        available_sensor_ids=[]
     )
-    return report
+

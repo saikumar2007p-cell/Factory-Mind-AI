@@ -37,6 +37,11 @@ ENV/
 .env.local
 .env.*.local
 
+# Firebase Service Account — NEVER commit this
+backend/firebase_service_account.json
+firebase_service_account.json
+*serviceAccountKey*.json
+
 # Testing & Coverage
 .pytest_cache/
 .coverage

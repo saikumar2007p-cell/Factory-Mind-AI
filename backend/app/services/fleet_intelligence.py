@@ -62,13 +62,14 @@ class FleetIntelligenceService:
 
     async def _get_all_active_alerts_map(self) -> Dict[int, List[Alert]]:
         """Bulk fetches active alerts for all machines in 1 query."""
-        stmt = select(Alert).where(Alert.is_acknowledged == False)
+        stmt = select(Alert).where(Alert.status == "ACTIVE")
         res = await self.session.execute(stmt)
         alerts = res.scalars().all()
         alert_map: Dict[int, List[Alert]] = {}
         for a in alerts:
             alert_map.setdefault(a.machine_id, []).append(a)
         return alert_map
+
 
     async def _get_all_active_work_orders_map(self) -> Dict[int, WorkOrder]:
         """Bulk fetches active work orders for all machines in 1 query."""
@@ -128,11 +129,12 @@ class FleetIntelligenceService:
 
         for m in machines:
             latest_pred = preds_map.get(m.id)
+            tel_state = getattr(m, "telemetry_state", "CURRENT")
             
-            # Telemetry status check
-            if m.status == "OFFLINE":
+            # Telemetry freshness status check
+            if tel_state in ["STALE", "NO_NEW_DATA"]:
                 stale_c += 1
-            elif m.current_cycle == 0 and not latest_pred:
+            elif tel_state == "NO_DATA" or (m.current_cycle == 0 and not latest_pred):
                 missing_c += 1
             elif latest_pred:
                 if latest_pred.risk_level == "CRITICAL":
@@ -154,7 +156,6 @@ class FleetIntelligenceService:
                 rul_unavail_c += 1
                 ml_incomp_c += 1
             else:
-                # Default baseline for C-MAPSS simulation machines
                 rul_unavail_c += 1
                 ml_comp_c += 1
 
@@ -189,7 +190,8 @@ class FleetIntelligenceService:
     async def get_fleet_machines(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """
         Retrieves all fleet machines enriched with genuine prognostic states,
-        active alerts, active work orders, and deterministic evidence-based ranking.
+        active alerts, active work orders, deterministic evidence-based ranking,
+        and explicit telemetry data-freshness states.
         """
         machines = await self.storage.get_all_machines()
         machines_to_process = machines[:limit] if limit is not None else machines
@@ -205,6 +207,8 @@ class FleetIntelligenceService:
             active_alerts = alerts_map.get(m.id, [])
             active_wo = wos_map.get(m.id)
 
+            tel_state = getattr(m, "telemetry_state", "NO_DATA")
+
             # Health classification
             health_status = "NORMAL"
             risk_level = "NORMAL"
@@ -214,22 +218,19 @@ class FleetIntelligenceService:
             anomaly_status = "NORMAL"
             data_quality = "OPTIMAL"
             ml_compat = "COMPATIBLE"
+            confidence_level = "HIGH"
+            confidence_score = 0.95
+            confidence_reason = None
             evidence = []
             score = 0.0
 
-            if m.status == "OFFLINE":
-                health_status = "STALE"
-                data_quality = "STALE"
-                evidence.append("Unit telemetry stream is OFFLINE / STALE.")
-                score += 15.0
-            elif m.current_cycle == 0 and not latest_pred:
-                health_status = "MISSING"
-                data_quality = "NO_DATA"
-                evidence.append("No active telemetry cycles received.")
-            elif latest_pred:
+            if latest_pred:
                 risk_level = latest_pred.risk_level
                 anomaly_score = latest_pred.anomaly_score
                 anomaly_status = latest_pred.anomaly_status
+                confidence_level = getattr(latest_pred, "confidence_level", "HIGH") or "HIGH"
+                confidence_score = getattr(latest_pred, "confidence_score", 0.95) or 0.95
+                confidence_reason = getattr(latest_pred, "confidence_reason", None)
 
                 if latest_pred.rul_estimate is not None:
                     rul_val = float(latest_pred.rul_estimate)
@@ -238,6 +239,37 @@ class FleetIntelligenceService:
                     rul_avail = False
                     ml_compat = "INCOMPATIBLE"
                     evidence.append("RUL Prognostic unavailable (ML Incompatible schema).")
+
+                if tel_state == "STALE" or m.status == "OFFLINE":
+                    health_status = "STALE"
+                    data_quality = "STALE"
+                    evidence.append("Unit telemetry stream is STALE (outside freshness window).")
+                    score += 15.0
+                elif tel_state == "NO_NEW_DATA":
+                    health_status = "STALE"
+                    data_quality = "STALE"
+                    evidence.append("No new telemetry received since last session.")
+                    score += 10.0
+                elif risk_level == "CRITICAL":
+                    health_status = "CRITICAL"
+                    score += 50.0
+                    evidence.append(f"CRITICAL risk state detected at cycle {latest_pred.cycle}.")
+                elif risk_level in ["WARNING", "MONITOR"]:
+                    health_status = "WARNING"
+                    score += 25.0
+                    evidence.append(f"{risk_level} degradation trend detected at cycle {latest_pred.cycle}.")
+                else:
+                    health_status = "NORMAL"
+            elif tel_state == "STALE" or m.status == "OFFLINE":
+                health_status = "STALE"
+                data_quality = "STALE"
+                evidence.append("Unit telemetry stream is STALE (outside freshness window).")
+                score += 15.0
+            elif tel_state == "NO_DATA" or m.current_cycle == 0:
+                health_status = "MISSING"
+                data_quality = "NO_DATA"
+                evidence.append("No active telemetry cycles received.")
+
 
                 if risk_level == "CRITICAL":
                     health_status = "CRITICAL"
@@ -277,6 +309,8 @@ class FleetIntelligenceService:
                 "location": m.location,
                 "status": m.status,
                 "current_cycle": m.current_cycle,
+                "telemetry_state": tel_state,
+                "last_telemetry_at": m.last_telemetry_at.isoformat() if getattr(m, "last_telemetry_at", None) else None,
                 "health_status": health_status,
                 "risk_level": risk_level,
                 "health_index": latest_pred.health_index if latest_pred else None,
@@ -284,6 +318,9 @@ class FleetIntelligenceService:
                 "rul_available": rul_avail,
                 "anomaly_score": anomaly_score,
                 "anomaly_status": anomaly_status,
+                "confidence_level": confidence_level,
+                "confidence_score": confidence_score,
+                "confidence_reason": confidence_reason,
                 "data_quality": data_quality,
                 "ml_compatibility": ml_compat,
                 "active_alert_count": len(active_alerts),
@@ -293,6 +330,7 @@ class FleetIntelligenceService:
                 "ranking_score": round(score, 1),
                 "ranking_evidence": evidence
             })
+
 
         # Deterministic sorting by ranking_score descending
         enriched_list.sort(key=lambda x: (x["ranking_score"], x["active_alert_count"]), reverse=True)

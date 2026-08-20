@@ -50,7 +50,7 @@ async def explain_machine_state(
         telemetry_history = await service.get_telemetry_history(machine.id, limit=50)
         import pandas as pd
         from ml.inference import get_inference_engine
-        from ml.dataset import SENSOR_COLS
+        from ml.dataset import CMAPSSDataset, SENSOR_COLS
 
         if telemetry_history:
             records = []
@@ -64,14 +64,27 @@ async def explain_machine_state(
                 records.append(rec)
             df_win = pd.DataFrame(records)
         else:
-            cur_cycle = request.cycle or getattr(machine, 'current_cycle', 1) or 1
-            records = []
-            for c in range(max(1, cur_cycle - 15), cur_cycle + 1):
-                row = {'unit_number': machine.unit_number, 'time_cycle': c, 'setting_1': 0.0, 'setting_2': 0.0, 'setting_3': 100.0}
-                for sc in SENSOR_COLS:
-                    row[sc] = 500.0
-                records.append(row)
-            df_win = pd.DataFrame(records)
+            # Load the REAL C-MAPSS trajectory for this unit — never use dummy constants
+            cur_cycle = request.cycle or getattr(machine, 'current_cycle', None) or 1
+            try:
+                dataset = CMAPSSDataset()
+                df_train = dataset.load_raw_train()
+                unit_df = df_train[df_train['unit_number'] == machine.unit_number].sort_values('time_cycle').reset_index(drop=True)
+                if not unit_df.empty:
+                    # Use data window up to requested cycle
+                    window = unit_df[unit_df['time_cycle'] <= cur_cycle].tail(50)
+                    if window.empty:
+                        window = unit_df.tail(50)
+                    df_win = window.reset_index(drop=True)
+                else:
+                    # unit not in FD001 — fall back to unit 1
+                    fallback_df = df_train[df_train['unit_number'] == 1].sort_values('time_cycle')
+                    df_win = fallback_df.tail(20).reset_index(drop=True)
+            except Exception as ds_err:
+                logger.warning(f"C-MAPSS load failed for unit {machine.unit_number}: {ds_err}. Using unit 1 fallback.")
+                dataset = CMAPSSDataset()
+                df_train = dataset.load_raw_train()
+                df_win = df_train[df_train['unit_number'] == 1].tail(20).reset_index(drop=True)
 
         engine = get_inference_engine()
         inf_res = engine.predict_window(df_win)

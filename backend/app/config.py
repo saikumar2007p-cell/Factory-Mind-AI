@@ -23,9 +23,14 @@ class Settings(BaseSettings):
     DATABASE_URL: Optional[str] = None
     FALLBACK_SQLITE_URL: str = f"sqlite+aiosqlite:///{ROOT_DIR / 'factorymind.db'}"
 
-    # Supabase (Optional)
+    # Supabase (LEGACY — kept temporarily for SQL-based ML pipeline compatibility)
     SUPABASE_URL: Optional[str] = None
     SUPABASE_SERVICE_ROLE_KEY: Optional[str] = None
+
+    # Firebase Admin SDK (Backend only — never expose to frontend)
+    FIREBASE_SERVICE_ACCOUNT_PATH: Optional[str] = None
+    FIREBASE_PROJECT_ID: Optional[str] = None
+    FIREBASE_AUTH_MODE: str = "DEVELOPMENT"  # FIREBASE or DEVELOPMENT
 
     # Google Gemini
     GEMINI_API_KEY: Optional[str] = None
@@ -66,6 +71,11 @@ class Settings(BaseSettings):
     def is_sqlite_fallback(self) -> bool:
         """Checks whether the active database connection is SQLite fallback."""
         return "sqlite" in self.effective_database_url.lower()
+
+    @property
+    def is_firebase_auth_enabled(self) -> bool:
+        """Returns True if Firebase authentication mode is enabled for production."""
+        return self.FIREBASE_AUTH_MODE.upper() == "FIREBASE"
 
     @property
     def cors_origins_list(self) -> List[str]:

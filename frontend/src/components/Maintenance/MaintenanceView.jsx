@@ -32,6 +32,8 @@ import {
   verifyWorkOrder
 } from '../../services/api';
 
+import GroundTruthOutcomeModal from './GroundTruthOutcomeModal';
+
 export default function MaintenanceView({ latestDiagnosis, onSelectMachine, machines = [], userRole = 'ADMIN', searchQuery: propSearchQuery }) {
   const [workOrders, setWorkOrders] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -44,7 +46,9 @@ export default function MaintenanceView({ latestDiagnosis, onSelectMachine, mach
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isOutcomeModalOpen, setIsOutcomeModalOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+
 
   // Form states
   const [assigneeName, setAssigneeName] = useState('');
@@ -546,14 +550,26 @@ export default function MaintenanceView({ latestDiagnosis, onSelectMachine, mach
                 </button>
               )}
 
-              {/* VERIFIED: Show Verification Complete */}
+              {/* VERIFIED: Show Verification Complete & Record Outcome Button */}
               {selectedOrder.status === 'VERIFIED' && (
-                <span className="badge badge-normal" style={{ background: '#ecfdf5', color: '#065f46', borderColor: '#a7f3d0' }}>
-                  <ShieldCheck size={14} /> Verification Complete ({selectedOrder.verification_status || 'RESOLVED'})
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span className="badge badge-normal" style={{ background: '#ecfdf5', color: '#065f46', borderColor: '#a7f3d0' }}>
+                    <ShieldCheck size={14} /> Verification Complete ({selectedOrder.verification_status || 'RESOLVED'})
+                  </span>
+                  {userRole !== 'VIEWER' && (
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => setIsOutcomeModalOpen(true)}
+                      style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <Sparkles size={14} color="#6366f1" /> Record Ground-Truth Outcome
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </div>
+
 
           {/* Details 2-Column Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px', marginBottom: '16px' }}>
@@ -915,6 +931,19 @@ export default function MaintenanceView({ latestDiagnosis, onSelectMachine, mach
           </div>
         </div>
       )}
+
+      {/* Ground-Truth Maintenance Outcome Modal */}
+      {isOutcomeModalOpen && selectedOrder && (
+        <GroundTruthOutcomeModal
+          workOrder={selectedOrder}
+          onClose={() => setIsOutcomeModalOpen(false)}
+          onSuccess={() => {
+            setIsOutcomeModalOpen(false);
+            fetchData();
+          }}
+        />
+      )}
     </div>
   );
 }
+

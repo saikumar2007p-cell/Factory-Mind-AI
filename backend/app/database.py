@@ -62,24 +62,46 @@ def get_session_maker(db_url: Optional[str] = None) -> async_sessionmaker[AsyncS
     return _session_maker
 
 
+def AsyncSessionLocal(db_url: Optional[str] = None) -> AsyncSession:
+    """Convenience factory returning a new AsyncSession."""
+    maker = get_session_maker(db_url)
+    return maker()
+
+
 async def init_db(db_url: Optional[str] = None):
-    """Initializes all database tables asynchronously."""
+    """Initializes all database tables and applies safe incremental schema migrations."""
     engine = get_engine(db_url)
     
     # Import all models to register with Base.metadata
-    from backend.app.models.machine import Machine
-    from backend.app.models.telemetry import Telemetry
-    from backend.app.models.prediction import Prediction
-    from backend.app.models.anomaly import Anomaly
-    from backend.app.models.alert import Alert
-    from backend.app.models.recommendation import Recommendation
-    from backend.app.models.work_order import WorkOrder, WorkOrderAuditLog
+    import backend.app.models
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+        # Safe column migrations for existing databases
+        migration_statements = [
+            "ALTER TABLE machines ADD COLUMN telemetry_state VARCHAR(20) DEFAULT 'NO_DATA'",
+            "ALTER TABLE machines ADD COLUMN last_telemetry_at DATETIME",
+            "ALTER TABLE machines ADD COLUMN telemetry_freshness_seconds INTEGER DEFAULT 300",
+            "ALTER TABLE predictions ADD COLUMN confidence_level VARCHAR(25)",
+            "ALTER TABLE predictions ADD COLUMN confidence_score FLOAT",
+            "ALTER TABLE predictions ADD COLUMN out_of_distribution_sensors JSON",
+            "ALTER TABLE predictions ADD COLUMN confidence_reason VARCHAR(500)",
+            "ALTER TABLE telemetry ADD COLUMN data_source_type VARCHAR(20) DEFAULT 'CMAPSS'",
+            "ALTER TABLE telemetry ADD COLUMN sensor_data JSON",
+        ]
+        from sqlalchemy import text
+        for stmt in migration_statements:
+            try:
+                await conn.execute(text(stmt))
+            except Exception:
+                # Column already exists
+                pass
         
     db_type = "Local SQLite Fallback" if ("sqlite" in (db_url or settings.effective_database_url).lower()) else "PostgreSQL / Supabase"
     print(f"[DATABASE] Initialized tables successfully on: {db_type}")
+
+
 
 
 async def close_db():

@@ -85,8 +85,13 @@ class StorageService:
         current_cycle: int,
         status: Optional[str] = None
     ) -> Optional[Machine]:
-        """Updates current cycle and operational status."""
-        values: Dict[str, Any] = {"current_cycle": current_cycle}
+        """Updates current cycle, operational status, and marks telemetry freshness as CURRENT."""
+        now = datetime.now(timezone.utc)
+        values: Dict[str, Any] = {
+            "current_cycle": current_cycle,
+            "last_telemetry_at": now,
+            "telemetry_state": "CURRENT"
+        }
         if status:
             values["status"] = status
 
@@ -98,6 +103,7 @@ class StorageService:
         )
         await self.session.execute(stmt)
         return await self.get_machine_by_id(machine_id)
+
 
     # -------------------------------------------------------------------------
     # TELEMETRY OPERATIONS
@@ -166,7 +172,7 @@ class StorageService:
     # -------------------------------------------------------------------------
 
     async def insert_prediction(self, machine_id: int, result: Dict[str, Any]) -> Prediction:
-        """Persists real Stage 2 inference output."""
+        """Persists real Stage 2 inference output including confidence and uncertainty metrics."""
         rul_val = float(result["rul_estimate"]) if result.get("rul_estimate") is not None else None
         prediction = Prediction(
             machine_id=machine_id,
@@ -179,12 +185,17 @@ class StorageService:
             risk_level=str(result.get("risk_level", "NORMAL")),
             model_version=str(result.get("model_version", "LightGBM-v1.0")),
             contributing_signals=result.get("contributing_signals"),
-            trends=result.get("trends")
+            trends=result.get("trends"),
+            confidence_level=result.get("confidence_level", "HIGH"),
+            confidence_score=float(result.get("confidence_score", 0.95)) if result.get("confidence_score") is not None else None,
+            out_of_distribution_sensors=result.get("out_of_distribution_sensors"),
+            confidence_reason=result.get("confidence_reason")
         )
         self.session.add(prediction)
         await self.session.flush()
         await self.session.refresh(prediction)
         return prediction
+
 
     async def get_latest_prediction(self, machine_id: int) -> Optional[Prediction]:
         """Retrieves most recent prediction for a machine."""

@@ -29,6 +29,9 @@ import {
   getLearningSignals
 } from '../../services/api';
 
+import BehavioralChangeFeed from './BehavioralChangeFeed';
+
+
 export default function MachineDetailView({
   machineId,
   onBack,
@@ -227,12 +230,45 @@ export default function MachineDetailView({
       <div className="card" style={{ marginBottom: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
               <span className="mono" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)' }}>
                 UNIT #{machine?.unit_number ? String(machine.unit_number).padStart(3, '0') : String(machineId).padStart(3, '0')}
               </span>
               <h2 style={{ fontSize: '20px', fontWeight: 700 }}>{machine?.name || `Turbofan Engine #${machineId}`}</h2>
               {getStatusBadge(risk)}
+
+              {/* Telemetry Freshness State Badge */}
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  backgroundColor: (machine?.telemetry_state || 'CURRENT') === 'CURRENT' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                  color: (machine?.telemetry_state || 'CURRENT') === 'CURRENT' ? '#10b981' : '#f59e0b',
+                  border: `1px solid ${(machine?.telemetry_state || 'CURRENT') === 'CURRENT' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`
+                }}
+              >
+                Stream: {machine?.telemetry_state || 'CURRENT'}
+              </span>
+
+              {/* Prediction Confidence Badge */}
+              {prediction?.confidence_level && (
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    backgroundColor: prediction.confidence_level === 'HIGH' ? 'rgba(99, 102, 241, 0.15)' : (prediction.confidence_level === 'MEDIUM' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(239, 68, 68, 0.15)'),
+                    color: prediction.confidence_level === 'HIGH' ? '#818cf8' : (prediction.confidence_level === 'MEDIUM' ? '#fbbf24' : '#f87171'),
+                    border: `1px solid ${prediction.confidence_level === 'HIGH' ? 'rgba(99, 102, 241, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`
+                  }}
+                  title={prediction.confidence_reason || 'ML Confidence Diagnostics'}
+                >
+                  Confidence: {prediction.confidence_level} ({Math.round((prediction.confidence_score || 0.9) * 100)}%)
+                </span>
+              )}
             </div>
             <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
               {machine?.machine_type || 'Turbofan Engine CF6-80C2'} &bull; {machine?.location || 'Test Cell 1'} &bull; Cycle <strong className="mono">{currentCycle}</strong>
@@ -311,10 +347,11 @@ export default function MachineDetailView({
       )}
 
       {/* Tabs Menu */}
-      <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-subtle)', marginBottom: '16px' }}>
+      <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-subtle)', marginBottom: '16px', flexWrap: 'wrap' }}>
         {[
           { id: 'telemetry', label: 'Sensor Telemetry (21 Channels)' },
           { id: 'trends', label: 'Degradation Trends' },
+          { id: 'drift', label: 'Drift & Behavioral Shifts' },
           { id: 'alerts', label: `Alarms & History (${alerts.length})` },
           { id: 'maintenance', label: `Work Orders (${workOrders.length})` },
           { id: 'learning', label: 'Learning & Outcomes' }
@@ -329,6 +366,7 @@ export default function MachineDetailView({
           </button>
         ))}
       </div>
+
 
       {/* Tab: Real Sensor Telemetry Table */}
       {activeTab === 'telemetry' && (
@@ -619,6 +657,12 @@ export default function MachineDetailView({
           </div>
         </div>
       )}
+
+      {/* Tab: Behavioral Change & Drift Detection */}
+      {activeTab === 'drift' && (
+        <BehavioralChangeFeed machineId={machineId} userRole={userRole} />
+      )}
     </div>
   );
 }
+

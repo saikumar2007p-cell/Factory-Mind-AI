@@ -29,16 +29,22 @@ import {
   getSecurityLogs
 } from '../../services/api';
 
+import ModelVersionPanel from './ModelVersionPanel';
+import UserManagementPanel from './UserManagementPanel';
+import MachineRegistrationQueue from './MachineRegistrationQueue';
+
 export default function SettingsView({ userRole = 'ADMIN' }) {
+  const [activeTab, setActiveTab] = useState('connectors'); // 'connectors' | 'models' | 'registrations' | 'users' | 'security'
   const [sources, setSources] = useState([]);
   const [activeSource, setActiveSource] = useState(null);
-  const [selectedConnector, setSelectedConnector] = useState(null); // 'rest_api_connector' | 'mqtt_iot_connector' | 'csv_file_import'
+  const [selectedConnector, setSelectedConnector] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionMessage, setActionMessage] = useState(null);
   const [testResult, setTestResult] = useState(null);
   const [testingConnection, setTestingConnection] = useState(false);
   const [securityLogs, setSecurityLogs] = useState([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
+
 
   // REST Config State
   const [restEndpoint, setRestEndpoint] = useState('');
@@ -211,101 +217,172 @@ export default function SettingsView({ userRole = 'ADMIN' }) {
         </p>
       </div>
 
-      {/* Mandatory Source Transparency Alert */}
-      <div
-        style={{
-          backgroundColor: '#eff6ff',
-          border: '1px solid #bfdbfe',
-          borderRadius: '8px',
-          padding: '14px 18px',
-          marginBottom: '24px',
-          display: 'flex',
-          gap: '12px',
-          alignItems: 'flex-start'
-        }}
-      >
-        <Info size={20} color="#2563eb" style={{ flexShrink: 0, marginTop: '2px' }} />
-        <div style={{ fontSize: '13px', color: '#1e3a8a', lineHeight: 1.5 }}>
-          <strong>Source Transparency & Architectural Contract:</strong>
-          <p style={{ marginTop: '4px', marginBottom: 0 }}>
-            "The current demonstration uses NASA C-MAPSS FD001 as its simulation data source. The platform is architected to accept real industrial telemetry through REST APIs, MQTT/IoT, or validated file ingestion. The predictive model only produces results when the incoming telemetry is compatible with the model's required feature schema."
-          </p>
-        </div>
+      {/* Settings Navigation Tabs */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '1px solid #1f2937', paddingBottom: '12px', flexWrap: 'wrap' }}>
+        <button
+          onClick={() => setActiveTab('connectors')}
+          className={`btn btn-sm ${activeTab === 'connectors' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          <Database size={15} />
+          Data Sources & Connectors
+        </button>
+
+        <button
+          onClick={() => setActiveTab('models')}
+          className={`btn btn-sm ${activeTab === 'models' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          <Layers size={15} />
+          Model Governance & Rollback
+        </button>
+
+        <button
+          onClick={() => setActiveTab('registrations')}
+          className={`btn btn-sm ${activeTab === 'registrations' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          <Radio size={15} />
+          Machine Review Queue
+        </button>
+
+        {userRole === 'ADMIN' && (
+          <button
+            onClick={() => setActiveTab('users')}
+            className={`btn btn-sm ${activeTab === 'users' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <ShieldCheck size={15} />
+            User Identity & Multi-Admin
+          </button>
+        )}
+
+        <button
+          onClick={() => setActiveTab('security')}
+          className={`btn btn-sm ${activeTab === 'security' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          <ShieldCheck size={15} />
+          Security Audit Trail
+        </button>
       </div>
 
-      {/* Action Notification */}
-      {actionMessage && (
-        <div
-          style={{
-            padding: '12px 16px',
-            borderRadius: '6px',
-            marginBottom: '20px',
-            backgroundColor: actionMessage.type === 'success' ? '#ecfdf5' : '#fef2f2',
-            border: `1px solid ${actionMessage.type === 'success' ? '#a7f3d0' : '#fecaca'}`,
-            color: actionMessage.type === 'success' ? '#065f46' : '#991b1b',
-            fontSize: '13px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}
-        >
-          {actionMessage.type === 'success' ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
-          <span>{actionMessage.text}</span>
+      {activeTab === 'models' && (
+        <div style={{ marginBottom: '24px' }}>
+          <ModelVersionPanel machineId={1} userRole={userRole} />
         </div>
       )}
 
-      {/* Admin Privilege Lock Banner */}
-      {userRole !== 'ADMIN' && (
-        <div
-          style={{
-            backgroundColor: 'rgba(239, 68, 68, 0.08)',
-            border: '1px solid rgba(239, 68, 68, 0.25)',
-            borderRadius: '8px',
-            padding: '12px 16px',
-            marginBottom: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px'
-          }}
-        >
-          <ShieldCheck size={18} color="#f87171" />
-          <span style={{ fontSize: '12px', color: '#f87171', fontWeight: 500 }}>
-            <strong>Administrative Configuration Locked:</strong> You are viewing platform settings in <strong>{userRole}</strong> mode. Connector and data source modifications require Administrator privileges.
-          </span>
+      {activeTab === 'registrations' && (
+        <div style={{ marginBottom: '24px' }}>
+          <MachineRegistrationQueue userRole={userRole} onMachineCreated={fetchSources} />
         </div>
       )}
 
-      {/* Section 1: Active Telemetry Data Source Card */}
-      <div className="card" style={{ marginBottom: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Database size={20} color="var(--brand-primary)" />
-            <h3 style={{ fontSize: '16px', fontWeight: 600 }}>Active Telemetry Source</h3>
-          </div>
-          <span
+      {activeTab === 'users' && (
+        <div style={{ marginBottom: '24px' }}>
+          <UserManagementPanel userRole={userRole} />
+        </div>
+      )}
+
+      {activeTab === 'connectors' && (
+        <>
+          {/* Mandatory Source Transparency Alert */}
+          <div
             style={{
-              padding: '4px 10px',
-              borderRadius: '20px',
-              fontSize: '12px',
-              fontWeight: 600,
-              backgroundColor: activeSource?.status === 'CONNECTED' ? '#d1fae5' : '#fee2e2',
-              color: activeSource?.status === 'CONNECTED' ? '#065f46' : '#991b1b',
+              backgroundColor: '#eff6ff',
+              border: '1px solid #bfdbfe',
+              borderRadius: '8px',
+              padding: '14px 18px',
+              marginBottom: '24px',
               display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
+              gap: '12px',
+              alignItems: 'flex-start'
             }}
           >
-            <span
+            <Info size={20} color="#2563eb" style={{ flexShrink: 0, marginTop: '2px' }} />
+            <div style={{ fontSize: '13px', color: '#1e3a8a', lineHeight: 1.5 }}>
+              <strong>Source Transparency & Architectural Contract:</strong>
+              <p style={{ marginTop: '4px', marginBottom: 0 }}>
+                "The current demonstration uses NASA C-MAPSS FD001 as its simulation data source. The platform is architected to accept real industrial telemetry through REST APIs, MQTT/IoT, or validated file ingestion. The predictive model only produces results when the incoming telemetry is compatible with the model's required feature schema."
+              </p>
+            </div>
+          </div>
+
+          {/* Action Notification */}
+          {actionMessage && (
+            <div
               style={{
-                width: '7px',
-                height: '7px',
-                borderRadius: '50%',
-                backgroundColor: activeSource?.status === 'CONNECTED' ? '#10b981' : '#ef4444'
+                padding: '12px 16px',
+                borderRadius: '6px',
+                marginBottom: '20px',
+                backgroundColor: actionMessage.type === 'success' ? '#ecfdf5' : '#fef2f2',
+                border: `1px solid ${actionMessage.type === 'success' ? '#a7f3d0' : '#fecaca'}`,
+                color: actionMessage.type === 'success' ? '#065f46' : '#991b1b',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
               }}
-            />
-            {activeSource?.status || 'CONNECTED'}
-          </span>
-        </div>
+            >
+              {actionMessage.type === 'success' ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+              <span>{actionMessage.text}</span>
+            </div>
+          )}
+
+          {/* Admin Privilege Lock Banner */}
+          {userRole !== 'ADMIN' && (
+            <div
+              style={{
+                backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                borderRadius: '8px',
+                padding: '12px 16px',
+                marginBottom: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}
+            >
+              <ShieldCheck size={18} color="#f87171" />
+              <span style={{ fontSize: '12px', color: '#f87171', fontWeight: 500 }}>
+                <strong>Administrative Configuration Locked:</strong> You are viewing platform settings in <strong>{userRole}</strong> mode. Connector and data source modifications require Administrator privileges.
+              </span>
+            </div>
+          )}
+
+          {/* Section 1: Active Telemetry Data Source Card */}
+          <div className="card" style={{ marginBottom: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Database size={20} color="var(--brand-primary)" />
+                <h3 style={{ fontSize: '16px', fontWeight: 600 }}>Active Telemetry Source</h3>
+              </div>
+              <span
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: '20px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  backgroundColor: activeSource?.status === 'CONNECTED' ? '#d1fae5' : '#fee2e2',
+                  color: activeSource?.status === 'CONNECTED' ? '#065f46' : '#991b1b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span
+                  style={{
+                    width: '7px',
+                    height: '7px',
+                    borderRadius: '50%',
+                    backgroundColor: activeSource?.status === 'CONNECTED' ? '#10b981' : '#ef4444'
+                  }}
+                />
+                {activeSource?.status || 'UNKNOWN'}
+              </span>
+            </div>
+
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', fontSize: '13px' }}>
           <div>
@@ -960,91 +1037,96 @@ export default function SettingsView({ userRole = 'ADMIN' }) {
           </div>
         </div>
       </div>
+    </>
+  )}
 
       {/* Section 5: Security Audit Trail Ledger */}
-      {userRole !== 'ADMIN' ? (
-        <div className="card" style={{ marginTop: '24px', borderLeft: '4px solid #dc2626', background: '#fef2f2' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <ShieldCheck size={26} color="#dc2626" />
-            <div>
-              <div style={{ fontSize: '15px', fontWeight: 700, color: '#991b1b' }}>
-                🔒 Security Audit Trail — Access Restricted (Admin Role Required)
-              </div>
-              <div style={{ fontSize: '12px', color: '#7f1d1d', marginTop: '4px', fontWeight: 500 }}>
-                Your current active session role is <strong>{userRole}</strong>. RBAC Security Audit Logs are restricted to <strong>ADMIN</strong> users only. Switch your role to <strong>ADMIN</strong> in the top navigation dropdown to view security event logs.
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="card" style={{ marginTop: '24px', borderLeft: '4px solid #ef4444' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <ShieldCheck size={20} color="#ef4444" />
+      {activeTab === 'security' && (
+        userRole !== 'ADMIN' ? (
+          <div className="card" style={{ marginTop: '24px', borderLeft: '4px solid #dc2626', background: '#fef2f2' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <ShieldCheck size={26} color="#dc2626" />
               <div>
-                <h3 style={{ fontSize: '15px', fontWeight: 600, margin: 0 }}>RBAC Security Audit Trail (Stage 11)</h3>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                  Immutable log of authorization events, rate-limiting triggers, and mutation access attempts.
-                </span>
+                <div style={{ fontSize: '15px', fontWeight: 700, color: '#991b1b' }}>
+                  🔒 Security Audit Trail — Access Restricted (Admin Role Required)
+                </div>
+                <div style={{ fontSize: '12px', color: '#7f1d1d', marginTop: '4px', fontWeight: 500 }}>
+                  Your current active session role is <strong>{userRole}</strong>. RBAC Security Audit Logs are restricted to <strong>ADMIN</strong> users only. Switch your role to <strong>ADMIN</strong> in the top navigation dropdown to view security event logs.
+                </div>
               </div>
             </div>
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={fetchSecurityLogs}
-              disabled={loadingLogs}
-            >
-              {loadingLogs ? 'Refreshing...' : 'Refresh Logs'}
-            </button>
           </div>
+        ) : (
+          <div className="card" style={{ marginTop: '24px', borderLeft: '4px solid #ef4444' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ShieldCheck size={20} color="#ef4444" />
+                <div>
+                  <h3 style={{ fontSize: '15px', fontWeight: 600, margin: 0 }}>RBAC Security Audit Trail (Stage 11)</h3>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                    Immutable log of authorization events, rate-limiting triggers, and mutation access attempts.
+                  </span>
+                </div>
+              </div>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={fetchSecurityLogs}
+                disabled={loadingLogs}
+              >
+                {loadingLogs ? 'Refreshing...' : 'Refresh Logs'}
+              </button>
+            </div>
 
-          {securityLogs.length === 0 ? (
-            <div className="empty-state" style={{ padding: '24px' }}>
-              <ShieldCheck size={32} color="var(--text-muted)" style={{ marginBottom: '8px' }} />
-              <div className="empty-title">No Security Events Recorded</div>
-              <div className="empty-desc">Security events and access decisions will appear here in real-time.</div>
-            </div>
-          ) : (
-            <div className="table-container">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Timestamp</th>
-                    <th>Actor</th>
-                    <th>Role</th>
-                    <th>Action</th>
-                    <th>Endpoint</th>
-                    <th>Status</th>
-                    <th>Client IP</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {securityLogs.map((evt) => (
-                    <tr key={evt.id}>
-                      <td className="mono" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                        {evt.timestamp ? new Date(evt.timestamp).toLocaleTimeString() : 'Recent'}
-                      </td>
-                      <td style={{ fontWeight: 600 }}>{evt.actor}</td>
-                      <td>
-                        <span className={`badge ${evt.role === 'ADMIN' ? 'badge-critical' : (evt.role === 'OPERATOR' ? 'badge-ai' : 'badge-normal')}`}>
-                          {evt.role}
-                        </span>
-                      </td>
-                      <td className="mono" style={{ fontSize: '12px' }}>{evt.action_attempted}</td>
-                      <td className="mono" style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{evt.endpoint}</td>
-                      <td>
-                        <span className={`badge ${evt.status === 'GRANTED' ? 'badge-normal' : (evt.status === 'RATE_LIMITED' ? 'badge-warning' : 'badge-critical')}`}>
-                          {evt.status}
-                        </span>
-                      </td>
-                      <td className="mono" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{evt.client_ip || '127.0.0.1'}</td>
+            {securityLogs.length === 0 ? (
+              <div className="empty-state" style={{ padding: '24px' }}>
+                <ShieldCheck size={32} color="var(--text-muted)" style={{ marginBottom: '8px' }} />
+                <div className="empty-title">No Security Events Recorded</div>
+                <div className="empty-desc">Security events and access decisions will appear here in real-time.</div>
+              </div>
+            ) : (
+              <div className="table-container">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Timestamp</th>
+                      <th>Actor</th>
+                      <th>Role</th>
+                      <th>Action</th>
+                      <th>Endpoint</th>
+                      <th>Status</th>
+                      <th>Client IP</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                  </thead>
+                  <tbody>
+                    {securityLogs.map((evt) => (
+                      <tr key={evt.id}>
+                        <td className="mono" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                          {evt.timestamp ? new Date(evt.timestamp).toLocaleTimeString() : 'Recent'}
+                        </td>
+                        <td style={{ fontWeight: 600 }}>{evt.actor}</td>
+                        <td>
+                          <span className={`badge ${evt.role === 'ADMIN' ? 'badge-critical' : (evt.role === 'OPERATOR' ? 'badge-ai' : 'badge-normal')}`}>
+                            {evt.role}
+                          </span>
+                        </td>
+                        <td className="mono" style={{ fontSize: '12px' }}>{evt.action_attempted}</td>
+                        <td className="mono" style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{evt.endpoint}</td>
+                        <td>
+                          <span className={`badge ${evt.status === 'GRANTED' ? 'badge-normal' : (evt.status === 'RATE_LIMITED' ? 'badge-warning' : 'badge-critical')}`}>
+                            {evt.status}
+                          </span>
+                        </td>
+                        <td className="mono" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{evt.client_ip || '127.0.0.1'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )
       )}
     </div>
   );
 }
+
