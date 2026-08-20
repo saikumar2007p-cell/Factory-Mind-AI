@@ -1,0 +1,27 @@
+{
+  "datasetId": "PHMAP_2023_VALVE",
+  "status": "REQUIRES_MANUAL_DOWNLOAD",
+  "reason": "PHMAP 2023 conference site requires registration for dataset access",
+  "officialSource": "https://phmap.jp/2023/data-challenge/",
+  "alternativeSource": "https://www.phmsociety.org/references/datasets",
+  "instructions": [
+    "1. Visit https://phmap.jp/2023/data-challenge/",
+    "2. Register and download the competition dataset",
+    "3. Extract data files to: data/raw/phmap2023_valve/"
+  ],
+  "expectedFormat": {
+    "description": "Time-series pressure data at 1kHz from spacecraft propulsion system",
+    "columns": [
+      "pressure_upstream",
+      "pressure_downstream",
+      "valve_command"
+    ],
+    "faultTypes": [
+      "normal",
+      "bubble_anomaly",
+      "valve_fault",
+      "leak"
+    ],
+    "sampleRate": "1 kHz"
+  }
+}

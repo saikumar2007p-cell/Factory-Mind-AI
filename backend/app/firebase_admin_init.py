@@ -1,4 +1,4 @@
-﻿"""
+"""
 backend/app/firebase_admin_init.py
 
 Singleton Firebase Admin SDK initialization for FactoryMind AI.
@@ -13,21 +13,32 @@ Security rules:
 import os
 import json
 import logging
-from typing import Optional
-import firebase_admin
-from firebase_admin import credentials, auth, firestore, storage as fb_storage
+from typing import Optional, Any
 
 logger = logging.getLogger("factorymind.firebase")
 
-_firebase_app: Optional[firebase_admin.App] = None
+try:
+    import firebase_admin
+    from firebase_admin import credentials, auth, firestore, storage as fb_storage
+    FIREBASE_AVAILABLE = True
+except ImportError:
+    firebase_admin = None
+    credentials = None
+    auth = None
+    firestore = None
+    fb_storage = None
+    FIREBASE_AVAILABLE = False
+    logger.warning("[Firebase] firebase-admin package is not installed. Running in mock/fallback mode.")
+
+_firebase_app: Optional[Any] = None
 
 
-def get_firebase_app() -> Optional[firebase_admin.App]:
+def get_firebase_app() -> Optional[Any]:
     """Returns the initialized Firebase Admin App singleton, or None if unconfigured."""
     return _firebase_app
 
 
-def init_firebase_admin() -> Optional[firebase_admin.App]:
+def init_firebase_admin() -> Optional[Any]:
     """
     Initializes Firebase Admin SDK once.
     
@@ -39,6 +50,9 @@ def init_firebase_admin() -> Optional[firebase_admin.App]:
     Returns the initialized app or None if no credentials are available.
     """
     global _firebase_app
+
+    if not FIREBASE_AVAILABLE:
+        return None
 
     if _firebase_app is not None:
         return _firebase_app
@@ -86,7 +100,6 @@ def init_firebase_admin() -> Optional[firebase_admin.App]:
         if cred:
             _firebase_app = firebase_admin.initialize_app(cred, options if options else None)
         else:
-            # Try Application Default Credentials
             _firebase_app = firebase_admin.initialize_app(options=options if options else None)
             logger.info("[Firebase] Initialized with Application Default Credentials.")
 
@@ -101,19 +114,19 @@ def init_firebase_admin() -> Optional[firebase_admin.App]:
 
 def is_firebase_ready() -> bool:
     """Returns True if Firebase Admin SDK is initialized and available."""
-    return _firebase_app is not None
+    return _firebase_app is not None and FIREBASE_AVAILABLE
 
 
 def get_auth_client():
     """Returns Firebase Auth client (requires initialized app)."""
-    return auth
+    return auth if FIREBASE_AVAILABLE else None
 
 
 def get_firestore_client():
     """Returns Firestore client (requires initialized app)."""
     if not is_firebase_ready():
         return None
-    return firestore.client()
+    return firestore.client() if firestore else None
 
 
 def get_storage_bucket(bucket_name: Optional[str] = None):
@@ -121,7 +134,7 @@ def get_storage_bucket(bucket_name: Optional[str] = None):
     if not is_firebase_ready():
         return None
     try:
-        return fb_storage.bucket(bucket_name)
+        return fb_storage.bucket(bucket_name) if fb_storage else None
     except Exception as e:
         logger.error(f"[Firebase Storage] Could not get bucket: {e}")
         return None
