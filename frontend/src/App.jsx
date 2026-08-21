@@ -108,11 +108,6 @@ export default function App() {
     setUserSessionState({ role: '', actor: '' });
   };
 
-  // Show login page if not authenticated
-  if (!isLoggedIn) {
-    return <LoginPage onLogin={handleLogin} />;
-  }
-
   // Data State
   const [fleetSummary, setFleetSummary] = useState(null);
   const [machines, setMachines] = useState([]);
@@ -173,13 +168,15 @@ export default function App() {
   };
 
   useEffect(() => {
+    if (!isLoggedIn) return;
     refreshFleetData();
     const interval = setInterval(refreshFleetData, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isLoggedIn]);
 
   // WebSocket Live Stream
   useEffect(() => {
+    if (!isLoggedIn) return;
     const ws = createWebSocketStream(
       (data) => {
         if (data.type === 'INITIAL_STATE' || data.type === 'SIMULATION_TICK') {
@@ -206,7 +203,7 @@ export default function App() {
     );
 
     return () => ws.close();
-  }, []);
+  }, [isLoggedIn]);
 
   // Diagnostics Trigger
   const handleRunDiagnostics = async (machineId, cycle = null) => {
@@ -330,6 +327,10 @@ export default function App() {
   };
 
   const { title, sub } = getPageTitle();
+
+  if (!isLoggedIn) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
 
   return (
     <div className="app-container">
