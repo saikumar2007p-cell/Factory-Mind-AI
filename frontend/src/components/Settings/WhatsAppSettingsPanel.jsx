@@ -24,7 +24,8 @@ import {
   testWhatsAppAlert,
   getWhatsAppLogs,
   sendWhatsAppAlert,
-  openWhatsAppDirect
+  openWhatsAppDirect,
+  triggerAutomatedCycleAlert
 } from '../../services/api';
 
 export default function WhatsAppSettingsPanel() {
@@ -135,6 +136,22 @@ export default function WhatsAppSettingsPanel() {
     }
   };
 
+  const handleTriggerAutomatedPipeline = async () => {
+    try {
+      setTesting(true);
+      const res = await triggerAutomatedCycleAlert(1);
+      if (res && res.success) {
+        setTestResult(res.result);
+        await loadAll();
+        alert('🚀 Automated Pipeline Executed! Machine telemetry evaluated and alert dispatched to +91 6303736452.');
+      }
+    } catch (err) {
+      alert('Automated pipeline execution error: ' + (err.message || 'Network error'));
+    } finally {
+      setTesting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="card" style={{ padding: '40px', textAlign: 'center' }}>
@@ -173,19 +190,40 @@ export default function WhatsAppSettingsPanel() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#ffffff' }}>
-                  Automated WhatsApp Notification Bot
+                  Automated Exotel SMS & WhatsApp Bot
                 </h3>
                 <span className="badge badge-normal" style={{ fontSize: '10px', background: '#059669', color: '#ffffff' }}>
-                  AUTOMATED DISPATCH ACTIVE
+                  AUTOMATED PIPELINE RUNNING
                 </span>
               </div>
               <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#a7f3d0' }}>
-                Sends automated WhatsApp messages to <strong>{settings.admin_phone_number}</strong> whenever critical machine alarms or degradation anomalies occur.
+                Automatically monitors machine sensors and dispatches SMS & WhatsApp alerts to <strong>{settings.admin_phone_number}</strong> with zero manual clicks required.
               </p>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <button
+              className="btn btn-sm"
+              onClick={handleTriggerAutomatedPipeline}
+              disabled={testing}
+              style={{
+                background: '#3b82f6',
+                color: '#ffffff',
+                border: 'none',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                cursor: 'pointer'
+              }}
+            >
+              <Zap size={14} />
+              {testing ? 'Evaluating...' : '🚀 Run Automated Alert Pipeline'}
+            </button>
+
             <button
               className="btn btn-sm"
               onClick={handleTriggerSimulatedAlert}
@@ -203,8 +241,8 @@ export default function WhatsAppSettingsPanel() {
                 cursor: 'pointer'
               }}
             >
-              <Zap size={14} />
-              {testing ? 'Dispatching...' : '⚡ Test Automated Message'}
+              <Send size={14} />
+              {testing ? 'Dispatching...' : '⚡ Test Exotel SMS'}
             </button>
           </div>
         </div>

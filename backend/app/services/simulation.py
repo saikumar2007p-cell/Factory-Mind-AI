@@ -202,6 +202,25 @@ class SimulationEngine:
 
                 if alert is not None:
                     alert_dict = alert.to_dict()
+                    # Trigger Automated Exotel SMS & WhatsApp Dispatch
+                    try:
+                        from backend.app.services.whatsapp_service import WhatsAppService
+                        wa_service = WhatsAppService()
+                        wa_settings = wa_service.get_settings()
+                        if wa_settings.get("auto_send_enabled", True) and wa_settings.get("whatsapp_enabled", True):
+                            asyncio.create_task(
+                                wa_service.send_automated_alert(
+                                    machine_id=machine_id,
+                                    machine_type=f"Turbofan CF6-80C2 Unit #{self.unit_number:03d}",
+                                    severity=alert.severity,
+                                    reason=alert.reason,
+                                    action="Inspect stage 1 HPC and replace turbine thermal seals",
+                                    rul=float(result.get("rul_estimate", 24.5)),
+                                    health=float(result.get("health_index", 52.4))
+                                )
+                            )
+                    except Exception as auto_err:
+                        logger.warning(f"Automated notification dispatch skipped: {auto_err}")
         except Exception as e:
             logger.error(f"Error persisting simulation cycle to database: {e}")
 

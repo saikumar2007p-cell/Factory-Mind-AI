@@ -552,6 +552,11 @@ export const testWhatsAppAlert = (phoneNumber) =>
 
 export const getWhatsAppLogs = () => request('/notifications/whatsapp/logs');
 
+export const triggerAutomatedCycleAlert = (machineId = 1) =>
+  request(`/notifications/whatsapp/trigger-automated-cycle?machine_id=${machineId}`, {
+    method: 'POST'
+  });
+
 export function openWhatsAppDirect(phone, message) {
   let cleanPhone = (phone || '').replace(/[^\d+]/g, '').replace(/^\+/, '');
   if (cleanPhone.length === 10 && /^[6789]/.test(cleanPhone)) {
