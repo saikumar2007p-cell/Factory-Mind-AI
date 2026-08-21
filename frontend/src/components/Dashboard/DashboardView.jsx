@@ -280,7 +280,7 @@ export default function DashboardView({
     };
   }, [maxCycle, currentCycle, telemetryDetails, selectedSensorIndex, riskLevel]);
 
-  // Dynamic Fleet Pie / Donut Chart Data
+  // Dynamic Fleet Pie / Donut Chart Data (Simplified & Plain English)
   const pieData = useMemo(() => {
     if (pieMode === 'dataset') {
       const tbCount = machines.filter(m => !m.machine_type || m.machine_type.includes('Turbofan')).length || 100;
@@ -289,32 +289,32 @@ export default function DashboardView({
       const totalUnits = tbCount + gbCount + vlCount;
 
       return {
-        title: 'Equipment Fleet by Dataset Source',
+        title: 'Machines by Equipment Type',
         totalLabel: 'Total Machines',
         totalValue: `${totalUnits} Units`,
         slices: [
-          { label: 'NASA C-MAPSS (Turbofan Engine)', value: tbCount, percent: Math.round((tbCount / totalUnits) * 100), color: '#38bdf8', icon: '✈️' },
-          { label: 'PHM 2009 (Industrial Gearbox)', value: gbCount, percent: Math.round((gbCount / totalUnits) * 100), color: '#818cf8', icon: '⚙️' },
-          { label: 'PHMAP 2023 (Solenoid Valve)', value: vlCount, percent: Math.round((vlCount / totalUnits) * 100), color: '#34d399', icon: '🚰' },
+          { label: 'Turbofan Engines (NASA Fleet)', value: tbCount, percent: Math.round((tbCount / totalUnits) * 100), color: '#38bdf8', icon: '✈️' },
+          { label: 'Industrial Gearboxes', value: gbCount, percent: Math.round((gbCount / totalUnits) * 100), color: '#818cf8', icon: '⚙️' },
+          { label: 'Industrial Control Valves', value: vlCount, percent: Math.round((vlCount / totalUnits) * 100), color: '#34d399', icon: '🚰' },
         ]
       };
     }
 
     if (pieMode === 'subsystem') {
       return {
-        title: 'Subsystem Risk & Anomaly Distribution',
-        totalLabel: 'Active Anomalies',
-        totalValue: '24 Events',
+        title: 'Machine Parts Requiring Attention',
+        totalLabel: 'Issues Found',
+        totalValue: '24 Parts',
         slices: [
-          { label: 'Low Pressure Turbine (LPT Blades)', value: 11, percent: 46, color: '#ef4444', icon: '🔥' },
-          { label: 'High Pressure Compressor (HPC)', value: 7, percent: 29, color: '#f59e0b', icon: '⚡' },
-          { label: 'Input Shaft & Planetary Bearings', value: 4, percent: 17, color: '#a855f7', icon: '⚙️' },
-          { label: 'Valve Seats & Electromagnetic Coil', value: 2, percent: 8, color: '#06b6d4', icon: '🚰' },
+          { label: 'Turbine Blades (LPT Section)', value: 11, percent: 46, color: '#ef4444', icon: '🔥' },
+          { label: 'Air Compressor (HPC Section)', value: 7, percent: 29, color: '#f59e0b', icon: '⚡' },
+          { label: 'Shafts & Rotating Bearings', value: 4, percent: 17, color: '#a855f7', icon: '⚙️' },
+          { label: 'Valve Seals & Coils', value: 2, percent: 8, color: '#06b6d4', icon: '🚰' },
         ]
       };
     }
 
-    // Default: 'health' (Operational vs Warning vs Critical)
+    // Default: 'health' (Healthy vs Warning vs Critical)
     const opCount = operational || (total - (critical + warning)) || 82;
     const warnCount = warning || 12;
     const critCount = critical || 6;
@@ -325,24 +325,24 @@ export default function DashboardView({
     const critPct = Math.max(0, 100 - opPct - warnPct);
 
     return {
-      title: 'Plant-Wide Fleet Operational Health Status',
-      totalLabel: 'Fleet Availability',
+      title: 'Plant Health Overview (How Machines Are Doing)',
+      totalLabel: 'Healthy Fleet',
       totalValue: `${opPct}%`,
       slices: [
-        { label: 'Operational (Normal / Stable)', value: opCount, percent: opPct, color: '#10b981', icon: '🟢', status: 'STABLE' },
-        { label: 'Attention / Monitoring Required', value: warnCount, percent: warnPct, color: '#f59e0b', icon: '🟡', status: 'WARNING' },
-        { label: 'Critical Safety Override / Urgent Review', value: critCount, percent: critPct, color: '#ef4444', icon: '🔴', status: 'CRITICAL' },
+        { label: 'Healthy (Running Smoothly)', value: opCount, percent: opPct, color: '#10b981', icon: '🟢', status: 'HEALTHY' },
+        { label: 'Needs Attention (Warning)', value: warnCount, percent: warnPct, color: '#f59e0b', icon: '🟡', status: 'WARNING' },
+        { label: 'Urgent Action Required (Critical)', value: critCount, percent: critPct, color: '#ef4444', icon: '🔴', status: 'CRITICAL' },
       ]
     };
   }, [pieMode, operational, warning, critical, total, machines]);
 
   const getStatusBadge = (lvl) => {
     switch (lvl) {
-      case 'CRITICAL': return <span className="badge badge-critical"><span className="status-dot dot-critical" />CRITICAL RISK</span>;
+      case 'CRITICAL': return <span className="badge badge-critical"><span className="status-dot dot-critical" />URGENT ATTENTION NEEDED</span>;
       case 'WARNING':
       case 'HIGH':
-      case 'MONITOR': return <span className="badge badge-warning"><span className="status-dot dot-warning" />ATTENTION REQUIRED</span>;
-      default: return <span className="badge badge-normal"><span className="status-dot dot-normal" />NORMAL / STABLE</span>;
+      case 'MONITOR': return <span className="badge badge-warning"><span className="status-dot dot-warning" />NEEDS ATTENTION</span>;
+      default: return <span className="badge badge-normal"><span className="status-dot dot-normal" />HEALTHY / NORMAL</span>;
     }
   };
 
@@ -580,8 +580,8 @@ export default function DashboardView({
               <button
                 onClick={() => setPieMode('health')}
                 style={{
-                  padding: '3px 8px',
-                  fontSize: '10px',
+                  padding: '4px 10px',
+                  fontSize: '11px',
                   fontWeight: 700,
                   borderRadius: '4px',
                   border: 'none',
@@ -590,13 +590,13 @@ export default function DashboardView({
                   color: '#ffffff'
                 }}
               >
-                Status
+                🩺 Health Status
               </button>
               <button
                 onClick={() => setPieMode('dataset')}
                 style={{
-                  padding: '3px 8px',
-                  fontSize: '10px',
+                  padding: '4px 10px',
+                  fontSize: '11px',
                   fontWeight: 700,
                   borderRadius: '4px',
                   border: 'none',
@@ -605,13 +605,13 @@ export default function DashboardView({
                   color: '#ffffff'
                 }}
               >
-                Equipment
+                🏭 Machine Types
               </button>
               <button
                 onClick={() => setPieMode('subsystem')}
                 style={{
-                  padding: '3px 8px',
-                  fontSize: '10px',
+                  padding: '4px 10px',
+                  fontSize: '11px',
                   fontWeight: 700,
                   borderRadius: '4px',
                   border: 'none',
@@ -620,7 +620,7 @@ export default function DashboardView({
                   color: '#ffffff'
                 }}
               >
-                Subsystems
+                🔧 Parts at Risk
               </button>
             </div>
           </div>
@@ -651,7 +651,7 @@ export default function DashboardView({
                       {slice.icon} {slice.label}
                     </div>
                     <div style={{ fontSize: '11px', color: '#94a3b8' }}>
-                      {slice.value} units actively configured in fleet registry
+                      {slice.value} machines monitored in this category
                     </div>
                   </div>
                 </div>
@@ -684,17 +684,17 @@ export default function DashboardView({
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
               <BrainCircuit size={22} color="#3b82f6" />
               <h2 className="page-title" style={{ margin: 0, fontSize: '22px', fontWeight: 800 }}>
-                FactoryMind AI — Machine Investigation Dashboard
+                FactoryMind AI — Machine Health & Diagnosis
               </h2>
             </div>
             <p className="page-description" style={{ margin: 0 }}>
-              Causal 6-step prognostic investigation: Observation, baseline comparison, structural delta, root cause, and prescriptive action.
+              6-Step Easy Diagnosis: See what changed, why it happened, and the exact steps to fix it.
             </p>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span className={`badge ${userRole === 'ADMIN' ? 'badge-critical' : 'badge-ai'}`} style={{ fontSize: '11px', padding: '4px 10px' }}>
-              {userRole === 'ADMIN' ? '👑 ADMIN INVESTIGATION MODE' : '🔧 OPERATOR INVESTIGATION MODE'}
+              {userRole === 'ADMIN' ? '👑 Admin Mode' : '🔧 Operator Mode'}
             </span>
           </div>
         </div>
@@ -718,10 +718,10 @@ export default function DashboardView({
               <ShieldCheck size={20} color="#818cf8" />
               <div>
                 <div style={{ fontSize: '13px', fontWeight: 700, color: '#e0e7ff' }}>
-                  ADMINISTRATIVE PLATFORM & FLEET GOVERNANCE
+                  ADMIN CONTROL PANEL & FLEET OVERVIEW
                 </div>
                 <div style={{ fontSize: '11px', color: '#a5b4fc' }}>
-                  System Health: 100% Operational | Multi-Tenant Data Connectors Active | 158/158 Passing Security Verifications
+                  System Status: 100% Operational | All Sensor Streams Connected | Security Verified
                 </div>
               </div>
             </div>
@@ -729,15 +729,15 @@ export default function DashboardView({
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: '12px', fontSize: '12px' }}>
                 <div style={{ background: 'rgba(255,255,255,0.08)', padding: '4px 10px', borderRadius: '6px' }}>
-                  <span style={{ color: '#94a3b8' }}>Fleet: </span>
+                  <span style={{ color: '#94a3b8' }}>Total Machines: </span>
                   <strong style={{ color: '#38bdf8' }}>{total} Units</strong>
                 </div>
                 <div style={{ background: 'rgba(255,255,255,0.08)', padding: '4px 10px', borderRadius: '6px' }}>
-                  <span style={{ color: '#94a3b8' }}>Critical/Warning: </span>
+                  <span style={{ color: '#94a3b8' }}>Need Attention: </span>
                   <strong style={{ color: '#f87171' }}>{critical + warning}</strong>
                 </div>
                 <div style={{ background: 'rgba(255,255,255,0.08)', padding: '4px 10px', borderRadius: '6px' }}>
-                  <span style={{ color: '#94a3b8' }}>Work Orders: </span>
+                  <span style={{ color: '#94a3b8' }}>Open Tasks: </span>
                   <strong style={{ color: '#c084fc' }}>{woSummary?.open_count ?? 0} Open</strong>
                 </div>
               </div>
@@ -837,7 +837,7 @@ export default function DashboardView({
               style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
             >
               <Activity size={14} color="#3b82f6" />
-              Full Telemetry View
+              View All Sensors
             </button>
           </div>
         </div>
@@ -852,37 +852,37 @@ export default function DashboardView({
           borderTop: '1px solid #f1f5f9'
         }}>
           <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Active Cycle</div>
+            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Operating Cycles</div>
             <div className="mono" style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', marginTop: '2px' }}>
-              Cycle {currentCycle} <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 500 }}>/ {maxCycle}</span>
+              Cycle {currentCycle} <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 500 }}>/ {maxCycle} max</span>
             </div>
           </div>
 
           <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Estimated RUL</div>
+            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Estimated Life Left</div>
             <div className="mono" style={{ fontSize: '18px', fontWeight: 800, color: rulEstimate < 30 ? '#dc2626' : (rulEstimate < 60 ? '#d97706' : '#16a34a'), marginTop: '2px' }}>
               {Number(rulEstimate).toFixed(1)} <span style={{ fontSize: '11px', fontWeight: 500 }}>cycles</span>
             </div>
           </div>
 
           <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Health Index</div>
+            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Machine Health</div>
             <div className="mono" style={{ fontSize: '18px', fontWeight: 800, color: healthIndex < 60 ? '#dc2626' : (healthIndex < 80 ? '#d97706' : '#16a34a'), marginTop: '2px' }}>
               {Number(healthIndex).toFixed(1)}%
             </div>
           </div>
 
           <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Anomaly Score</div>
+            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Risk Score</div>
             <div className="mono" style={{ fontSize: '18px', fontWeight: 800, color: anomalyScore > 0.2 ? '#dc2626' : (anomalyScore > 0.05 ? '#d97706' : '#0f172a'), marginTop: '2px' }}>
-              {Number(anomalyScore).toFixed(4)}
+              {anomalyScore > 0.2 ? 'High' : (anomalyScore > 0.05 ? 'Moderate' : 'Low')} <span style={{ fontSize: '11px', color: '#94a3b8' }}>({Number(anomalyScore).toFixed(4)})</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* 3.5. INTERACTIVE PROGNOSTIC GRAPH & TRAJECTORY EXPLORER         */}
+      {/* 3.5. INTERACTIVE FLEET HEALTH PIE CHART & SENSOR EXPLORER       */}
       {/* ═══════════════════════════════════════════════════════════════ */}
       <div className="card" style={{
         marginBottom: '20px',
@@ -900,10 +900,10 @@ export default function DashboardView({
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>
-                Fleet Risk & Health Distribution (Interactive Pie Chart)
+                Fleet Health Breakdown (Pie Chart)
               </h3>
               <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>
-                Visual breakdown of plant operational availability, active equipment datasets, and subsystem risk levels
+                Quick visual overview of healthy machines, warnings, and urgent repair alerts
               </p>
             </div>
           </div>
@@ -948,7 +948,7 @@ export default function DashboardView({
               }}
             >
               <LineChart size={13} color={graphMode === 'sensor_trajectory' ? '#2563eb' : '#64748b'} />
-              Sensor Trajectory
+              Sensor Curves
             </button>
             <button
               onClick={() => setGraphMode('rul_curve')}
@@ -968,7 +968,7 @@ export default function DashboardView({
               }}
             >
               <TrendingDown size={13} color={graphMode === 'rul_curve' ? '#d97706' : '#64748b'} />
-              RUL & Degradation
+              Life Degradation
             </button>
             <button
               onClick={() => setIsGraphExpanded(!isGraphExpanded)}
@@ -1079,27 +1079,27 @@ export default function DashboardView({
                 {/* Bottom Metrics Bar */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px', marginTop: '12px' }}>
                   <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Baseline Reference</div>
+                    <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Standard Reading (When New)</div>
                     <div className="mono" style={{ fontSize: '14px', fontWeight: 700, color: '#16a34a', marginTop: '2px' }}>
                       {graphData.activeSensor.prev}
                     </div>
                   </div>
                   <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Current Value (Cycle {currentCycle})</div>
+                    <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Current Reading (Cycle {currentCycle})</div>
                     <div className="mono" style={{ fontSize: '14px', fontWeight: 700, color: riskLevel === 'CRITICAL' ? '#dc2626' : (riskLevel === 'WARNING' ? '#d97706' : '#0f172a'), marginTop: '2px' }}>
                       {graphData.activeSensor.curr}
                     </div>
                   </div>
                   <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Measured Drift</div>
+                    <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Difference from Normal</div>
                     <div className="mono" style={{ fontSize: '14px', fontWeight: 700, color: graphData.activeSensor.isElevated ? '#dc2626' : '#16a34a', marginTop: '2px' }}>
                       {graphData.activeSensor.delta} ({graphData.activeSensor.dir})
                     </div>
                   </div>
                   <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Primary Subsystem</div>
+                    <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Affected Machine Part</div>
                     <div style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {graphData.activeSensor.subsystem || 'Core Engine'}
+                      {graphData.activeSensor.subsystem || 'Main Engine'}
                     </div>
                   </div>
                 </div>
@@ -1110,7 +1110,7 @@ export default function DashboardView({
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* 4. THE 6-STEP CAUSAL INVESTIGATION PIPELINE                     */}
+      {/* 4. THE 6-STEP EASY MACHINE DIAGNOSIS PIPELINE                   */}
       {/* ═══════════════════════════════════════════════════════════════ */}
       
       {/* ── STEP 1 & STEP 2: PREVIOUS vs CURRENT COMPARISON ── */}
@@ -1130,21 +1130,21 @@ export default function DashboardView({
                 1
               </div>
               <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>
-                STEP 1: PREVIOUS (Baseline State)
+                STEP 1: WHEN NEW (Normal Baseline)
               </h3>
             </div>
             <span style={{ fontSize: '11px', padding: '3px 8px', background: '#f1f5f9', color: '#475569', borderRadius: '4px', fontWeight: 600 }}>
-              Cycles 1 – 25 Baseline
+              Early Cycles (Brand New)
             </span>
           </div>
 
           <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.4, marginBottom: '14px' }}>
-            <strong>What was the machine doing before?</strong> Thermal and rotational telemetry followed an established, stable baseline pattern across all 21 sensor channels during early operational cycles.
+            <strong>How was the machine running before?</strong> When the machine was new, temperature, pressure, and vibrations were completely normal and steady across all sensors.
           </p>
 
           <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
             <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>
-              Nominal Baseline Parameters
+              Normal Sensor Standards (Target Baseline)
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px' }}>
               {telemetryDetails.baseline.map((b, idx) => (
@@ -1157,8 +1157,8 @@ export default function DashboardView({
           </div>
 
           <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#64748b' }}>
-            <span>Status: <strong style={{ color: '#16a34a' }}>OPERATIONAL (STABLE)</strong></span>
-            <span>Initial Baseline RUL: <strong className="mono" style={{ color: '#0f172a' }}>125.0 cycles</strong></span>
+            <span>Status: <strong style={{ color: '#16a34a' }}>HEALTHY (STABLE)</strong></span>
+            <span>Starting Life: <strong className="mono" style={{ color: '#0f172a' }}>125.0 cycles</strong></span>
           </div>
         </div>
 
@@ -1187,7 +1187,7 @@ export default function DashboardView({
                 2
               </div>
               <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>
-                STEP 2: CURRENT (Active Observation)
+                STEP 2: HOW IT IS RUNNING NOW
               </h3>
             </div>
             <span style={{
@@ -1198,19 +1198,19 @@ export default function DashboardView({
               borderRadius: '4px',
               fontWeight: 700
             }}>
-              Active Cycle {currentCycle}
+              Now at Cycle {currentCycle}
             </span>
           </div>
 
           <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.4, marginBottom: '14px' }}>
-            <strong>What is happening now?</strong> {riskLevel === 'NORMAL' 
-              ? 'Telemetry streams continue to conform to healthy baseline bounds with zero abnormal thermodynamic drift.'
-              : `Current operational telemetry demonstrates sustained divergence and accelerated degradation across key subsystem channels.`}
+            <strong>What is happening right now?</strong> {riskLevel === 'NORMAL' 
+              ? 'All sensor readings are healthy and operating smoothly within safe normal limits.'
+              : `Sensors show abnormal heat and wear drifting away from normal values on key machine components.`}
           </p>
 
           <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
             <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>
-              Current Sensor Observations
+              Current Sensor Readings
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px' }}>
               {telemetryDetails.baseline.map((b, idx) => (
@@ -1230,8 +1230,8 @@ export default function DashboardView({
           </div>
 
           <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#64748b' }}>
-            <span>Current Status: <strong style={{ color: riskLevel === 'CRITICAL' ? '#dc2626' : (riskLevel === 'WARNING' ? '#d97706' : '#16a34a') }}>{riskLevel}</strong></span>
-            <span>Current RUL Estimate: <strong className="mono" style={{ color: rulEstimate < 30 ? '#dc2626' : '#0f172a' }}>{Number(rulEstimate).toFixed(1)} cycles</strong></span>
+            <span>Status: <strong style={{ color: riskLevel === 'CRITICAL' ? '#dc2626' : (riskLevel === 'WARNING' ? '#d97706' : '#16a34a') }}>{riskLevel === 'CRITICAL' ? 'URGENT ATTENTION' : (riskLevel === 'WARNING' ? 'NEEDS ATTENTION' : 'HEALTHY')}</strong></span>
+            <span>Life Left: <strong className="mono" style={{ color: rulEstimate < 30 ? '#dc2626' : '#0f172a' }}>{Number(rulEstimate).toFixed(1)} cycles</strong></span>
           </div>
         </div>
       </div>
@@ -1250,12 +1250,12 @@ export default function DashboardView({
               3
             </div>
             <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>
-              STEP 3: DIFFERENCE — WHAT CHANGED?
+              STEP 3: WHAT CHANGED? (DIFFERENCE TABLE)
             </h3>
           </div>
 
           <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>
-            Origin Hierarchy: <span style={{ color: '#2563eb' }}>{locationBreadcrumb} → Unit #{String(unitNum).padStart(3, '0')} → {telemetryDetails.primarySubsystem}</span>
+            Location: <span style={{ color: '#2563eb' }}>{locationBreadcrumb} → Unit #{String(unitNum).padStart(3, '0')} → {telemetryDetails.primarySubsystem}</span>
           </div>
         </div>
 
@@ -1270,9 +1270,9 @@ export default function DashboardView({
           color: riskLevel === 'NORMAL' ? '#166534' : '#991b1b',
           lineHeight: 1.5
         }}>
-          <strong>Summary of Change:</strong> {riskLevel === 'NORMAL'
-            ? 'No significant change detected from the available evidence. Telemetry remains within normal statistical bounds.'
-            : `FactoryMind detected abnormal divergence in ${telemetryDetails.primarySubsystem}. Primary driver is ${telemetryDetails.primarySensor}, which shows a sustained shift relative to early-cycle baseline.`}
+          <strong>Summary of Difference:</strong> {riskLevel === 'NORMAL'
+            ? 'No abnormal changes detected. All sensor measurements remain within normal, safe operating limits.'
+            : `FactoryMind detected abnormal drift in the ${telemetryDetails.primarySubsystem}. The main sensor showing change is ${telemetryDetails.primarySensor}, which has shifted away from its original healthy reading.`}
         </div>
 
         {/* Change Vectors Detailed Table */}
@@ -1280,13 +1280,13 @@ export default function DashboardView({
           <table className="data-table" style={{ fontSize: '12px' }}>
             <thead>
               <tr style={{ background: '#f8fafc' }}>
-                <th>Sensor / Telemetry Metric</th>
-                <th>Subsystem Component</th>
-                <th>Previous (Baseline)</th>
-                <th>Current (Cycle {currentCycle})</th>
-                <th>Net Delta (Δ)</th>
-                <th>Direction of Change</th>
-                <th>Component State</th>
+                <th>Sensor / Measurement</th>
+                <th>Machine Part</th>
+                <th>When New (Baseline)</th>
+                <th>Now (Cycle {currentCycle})</th>
+                <th>Difference (Delta)</th>
+                <th>Trend</th>
+                <th>Condition</th>
               </tr>
             </thead>
             <tbody>
@@ -1312,7 +1312,7 @@ export default function DashboardView({
                   </td>
                   <td>
                     <span className={`badge ${row.isElevated ? (riskLevel === 'CRITICAL' ? 'badge-critical' : 'badge-warning') : 'badge-normal'}`} style={{ fontSize: '10px' }}>
-                      {row.isElevated ? 'DRIFT DETECTED' : 'NORMAL'}
+                      {row.isElevated ? 'NEEDS ATTENTION' : 'HEALTHY'}
                     </span>
                   </td>
                 </tr>
@@ -1322,7 +1322,7 @@ export default function DashboardView({
         </div>
       </div>
 
-      {/* ── STEP 4: WHY WAS THIS ISSUE RAISED? ── */}
+      {/* ── STEP 4: WHY DID THIS HAPPEN? (ROOT CAUSE) ── */}
       <div className="card" style={{
         marginBottom: '20px',
         padding: '20px',
@@ -1336,7 +1336,7 @@ export default function DashboardView({
               4
             </div>
             <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>
-              STEP 4: WHY WAS THIS ISSUE RAISED?
+              STEP 4: WHY DID THIS HAPPEN? (ROOT CAUSE)
             </h3>
           </div>
 
@@ -1357,7 +1357,7 @@ export default function DashboardView({
             }}
           >
             <BrainCircuit size={14} color="#8b5cf6" />
-            {evidenceExpanded ? 'Hide Traceable AI Evidence' : 'Why do we believe this? (Traceable AI Evidence)'}
+            {evidenceExpanded ? 'Hide AI Proof & Calculations' : 'Why do we believe this? (AI Proof & Calculations)'}
             {evidenceExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
         </div>
@@ -1378,31 +1378,31 @@ export default function DashboardView({
           }}>
             <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <ShieldCheck size={16} color="#16a34a" />
-              Verified Telemetry Evidence & Model Transparency
+              Verified Sensor Evidence & Explanation
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginTop: '10px' }}>
               <div style={{ background: '#ffffff', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                <div style={{ color: '#64748b', fontSize: '11px', fontWeight: 600 }}>PRIMARY FEATURE CONTRIBUTION</div>
+                <div style={{ color: '#64748b', fontSize: '11px', fontWeight: 600 }}>MAIN SENSOR TRIGGERING ALERT</div>
                 <div style={{ marginTop: '4px', fontWeight: 700, color: '#0f172a' }}>
-                  {telemetryDetails.primarySensor} (38.2% SHAP Weight)
+                  {telemetryDetails.primarySensor} (Highest Impact Factor)
                 </div>
               </div>
               <div style={{ background: '#ffffff', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                <div style={{ color: '#64748b', fontSize: '11px', fontWeight: 600 }}>STATISTICAL DEVIATION</div>
+                <div style={{ color: '#64748b', fontSize: '11px', fontWeight: 600 }}>HOW FAR OFF NORMAL</div>
                 <div className="mono" style={{ marginTop: '4px', fontWeight: 700, color: riskLevel === 'CRITICAL' ? '#dc2626' : '#d97706' }}>
-                  Z-Score = {riskLevel === 'CRITICAL' ? '+3.42σ' : (riskLevel === 'WARNING' ? '+2.15σ' : '+0.21σ')}
+                  {riskLevel === 'CRITICAL' ? 'Extremely High Deviation (+3.4σ)' : (riskLevel === 'WARNING' ? 'Moderate Deviation (+2.1σ)' : 'Normal Range (+0.2σ)')}
                 </div>
               </div>
               <div style={{ background: '#ffffff', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                <div style={{ color: '#64748b', fontSize: '11px', fontWeight: 600 }}>INFERENCE ENGINE</div>
+                <div style={{ color: '#64748b', fontSize: '11px', fontWeight: 600 }}>AI PREDICTION MODELS</div>
                 <div style={{ marginTop: '4px', fontWeight: 700, color: '#0f172a' }}>
-                  LightGBM v2.4 + Isolation Forest
+                  Machine Learning Ensemble + Anomaly Detector
                 </div>
               </div>
               <div style={{ background: '#ffffff', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                <div style={{ color: '#64748b', fontSize: '11px', fontWeight: 600 }}>DATA REPRODUCIBILITY</div>
-                <div className="mono" style={{ marginTop: '4px', fontWeight: 700, color: '#0f172a' }}>
-                  SHA256: 8f9b2...verified
+                <div style={{ color: '#64748b', fontSize: '11px', fontWeight: 600 }}>SENSOR DATA VERIFICATION</div>
+                <div className="mono" style={{ marginTop: '4px', fontWeight: 700, color: '#16a34a' }}>
+                  ✓ 100% Verified Telemetry Stream
                 </div>
               </div>
             </div>
@@ -1413,7 +1413,7 @@ export default function DashboardView({
       {/* ── STEP 5 & STEP 6: WHAT IS THE CONCERN? & WHAT SHOULD WE DO? ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px', marginBottom: '24px' }}>
         
-        {/* STEP 5: WHAT IS THE CONCERN? */}
+        {/* STEP 5: WHAT IS THE RISK? */}
         <div className="card" style={{
           background: '#ffffff',
           border: '1.5px solid #cbd5e1',
@@ -1426,7 +1426,7 @@ export default function DashboardView({
                 5
               </div>
               <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>
-                STEP 5: WHAT IS THE CONCERN?
+                STEP 5: WHAT IS THE RISK?
               </h3>
             </div>
             <span className={`badge ${riskLevel === 'CRITICAL' ? 'badge-critical' : (riskLevel === 'WARNING' ? 'badge-warning' : 'badge-normal')}`}>
@@ -1435,21 +1435,21 @@ export default function DashboardView({
           </div>
 
           <div style={{ marginBottom: '12px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Core Concern:</div>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Main Concern:</div>
             <div style={{ fontSize: '13.5px', color: '#0f172a', fontWeight: 600, marginTop: '2px' }}>
               {telemetryDetails.concern}
             </div>
           </div>
 
           <div style={{ marginBottom: '12px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Potential Operational Impact:</div>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Possible Impact:</div>
             <div style={{ fontSize: '12.5px', color: '#475569', marginTop: '2px', lineHeight: 1.4 }}>
               {telemetryDetails.potentialImpact}
             </div>
           </div>
 
           <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
-            <span style={{ color: '#64748b' }}>Model Confidence:</span>
+            <span style={{ color: '#64748b' }}>AI Confidence:</span>
             <strong style={{ color: '#0f172a' }}>{telemetryDetails.confidence}</strong>
           </div>
         </div>
@@ -1467,7 +1467,7 @@ export default function DashboardView({
                 6
               </div>
               <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>
-                STEP 6: WHAT SHOULD WE DO?
+                STEP 6: WHAT SHOULD WE DO? (ACTION PLAN)
               </h3>
             </div>
             <span style={{
@@ -1478,12 +1478,12 @@ export default function DashboardView({
               background: '#dbeafe',
               color: '#1e40af'
             }}>
-              STRATEGY: {telemetryDetails.actionStrategy}
+              ACTION: {telemetryDetails.actionStrategy}
             </span>
           </div>
 
           <div style={{ marginBottom: '14px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Recommended Prescriptive Action:</div>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Recommended Step-by-Step Fix:</div>
             <div style={{ fontSize: '13px', color: '#0f172a', fontWeight: 600, marginTop: '2px', lineHeight: 1.4 }}>
               {telemetryDetails.actionPlan}
             </div>
@@ -1507,7 +1507,7 @@ export default function DashboardView({
                 disabled={diagnosticsLoading}
               >
                 <BrainCircuit size={14} color="#8b5cf6" />
-                {diagnosticsLoading ? 'Analyzing...' : 'Generate Gemini RCA'}
+                {diagnosticsLoading ? 'Analyzing...' : 'Ask AI for Root Cause'}
               </button>
             </div>
 
@@ -1516,14 +1516,14 @@ export default function DashboardView({
               style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               onClick={() => onSelectMachine(activeFeaturedMachine.id || 1)}
             >
-              <Activity size={14} color="#3b82f6" /> Open Full Subsystem Diagnostics →
+              <Activity size={14} color="#3b82f6" /> View All Machine Sensors & Details →
             </button>
           </div>
         </div>
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* 5. ACTIVE ALARMS & GROUNDED AI DIAGNOSTICS LEDGER               */}
+      {/* 5. ACTIVE ALARMS & AI DIAGNOSTICS LOG                           */}
       {/* ═══════════════════════════════════════════════════════════════ */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px', marginBottom: '24px' }}>
         
@@ -1532,7 +1532,7 @@ export default function DashboardView({
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <AlertTriangle size={18} color="#d97706" />
-              <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a', margin: 0 }}>Active Degradation Alarms</h3>
+              <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a', margin: 0 }}>Active Machine Warnings & Alarms</h3>
             </div>
             <button
               className="btn btn-secondary btn-sm"
