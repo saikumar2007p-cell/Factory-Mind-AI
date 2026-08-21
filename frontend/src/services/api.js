@@ -30,22 +30,22 @@ export function getCached(path) {
 export function getUserSession() {
   const role = localStorage.getItem(SESSION_ROLE_KEY);
   const actor = localStorage.getItem(SESSION_ACTOR_KEY);
-  if (!role) {
+  if (!role || (role !== 'ADMIN' && role !== 'OPERATOR')) {
     return { role: null, actor: null };
   }
   return {
     role,
-    actor: actor || (role === 'ADMIN' ? 'Chief Operations Admin' : (role === 'OPERATOR' ? 'Field Engineer' : 'Read-Only Auditor'))
+    actor: actor || (role === 'ADMIN' ? 'Chief Operations Admin' : 'Lead Maintenance Engineer')
   };
 }
 
 export function setUserSession(role, actor = null) {
-  const normRole = role ? role.toUpperCase() : 'OPERATOR';
+  const normRole = role && role.toUpperCase() === 'ADMIN' ? 'ADMIN' : 'OPERATOR';
   localStorage.setItem(SESSION_ROLE_KEY, normRole);
   if (actor) {
     localStorage.setItem(SESSION_ACTOR_KEY, actor);
   } else {
-    const defaultActor = normRole === 'ADMIN' ? 'Chief Operations Admin' : (normRole === 'OPERATOR' ? 'Field Engineer' : 'Read-Only Auditor');
+    const defaultActor = normRole === 'ADMIN' ? 'Chief Operations Admin' : 'Lead Maintenance Engineer';
     localStorage.setItem(SESSION_ACTOR_KEY, defaultActor);
   }
 }
