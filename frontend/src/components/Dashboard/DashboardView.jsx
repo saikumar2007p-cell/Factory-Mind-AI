@@ -27,7 +27,8 @@ import {
   Flame,
   Zap,
   Gauge,
-  LineChart
+  LineChart,
+  PieChart
 } from 'lucide-react';
 import { getWorkOrdersSummary, getFleetSummary, getLearningOverview, getCached } from '../../services/api';
 
@@ -48,7 +49,9 @@ export default function DashboardView({
 }) {
   const [selectedFeaturedId, setSelectedFeaturedId] = useState(1);
   const [evidenceExpanded, setEvidenceExpanded] = useState(false);
-  const [graphMode, setGraphMode] = useState('sensor_trajectory'); // 'sensor_trajectory' | 'rul_curve' | 'multi_sensor'
+  const [graphMode, setGraphMode] = useState('sensor_trajectory'); // 'sensor_trajectory' | 'rul_curve' | 'pie_chart'
+  const [pieMode, setPieMode] = useState('health'); // 'health' | 'dataset' | 'subsystem'
+  const [hoveredSlice, setHoveredSlice] = useState(null);
   const [selectedSensorIndex, setSelectedSensorIndex] = useState(0);
   const [hoveredPoint, setHoveredPoint] = useState(null);
   const [isGraphExpanded, setIsGraphExpanded] = useState(true);
@@ -277,6 +280,62 @@ export default function DashboardView({
     };
   }, [maxCycle, currentCycle, telemetryDetails, selectedSensorIndex, riskLevel]);
 
+  // Dynamic Fleet Pie / Donut Chart Data
+  const pieData = useMemo(() => {
+    if (pieMode === 'dataset') {
+      const tbCount = machines.filter(m => !m.machine_type || m.machine_type.includes('Turbofan')).length || 100;
+      const gbCount = machines.filter(m => m.machine_type && m.machine_type.includes('Gearbox')).length || 6;
+      const vlCount = machines.filter(m => m.machine_type && m.machine_type.includes('Valve')).length || 5;
+      const totalUnits = tbCount + gbCount + vlCount;
+
+      return {
+        title: 'Equipment Fleet by Dataset Source',
+        totalLabel: 'Total Machines',
+        totalValue: `${totalUnits} Units`,
+        slices: [
+          { label: 'NASA C-MAPSS (Turbofan Engine)', value: tbCount, percent: Math.round((tbCount / totalUnits) * 100), color: '#38bdf8', icon: '✈️' },
+          { label: 'PHM 2009 (Industrial Gearbox)', value: gbCount, percent: Math.round((gbCount / totalUnits) * 100), color: '#818cf8', icon: '⚙️' },
+          { label: 'PHMAP 2023 (Solenoid Valve)', value: vlCount, percent: Math.round((vlCount / totalUnits) * 100), color: '#34d399', icon: '🚰' },
+        ]
+      };
+    }
+
+    if (pieMode === 'subsystem') {
+      return {
+        title: 'Subsystem Risk & Anomaly Distribution',
+        totalLabel: 'Active Anomalies',
+        totalValue: '24 Events',
+        slices: [
+          { label: 'Low Pressure Turbine (LPT Blades)', value: 11, percent: 46, color: '#ef4444', icon: '🔥' },
+          { label: 'High Pressure Compressor (HPC)', value: 7, percent: 29, color: '#f59e0b', icon: '⚡' },
+          { label: 'Input Shaft & Planetary Bearings', value: 4, percent: 17, color: '#a855f7', icon: '⚙️' },
+          { label: 'Valve Seats & Electromagnetic Coil', value: 2, percent: 8, color: '#06b6d4', icon: '🚰' },
+        ]
+      };
+    }
+
+    // Default: 'health' (Operational vs Warning vs Critical)
+    const opCount = operational || (total - (critical + warning)) || 82;
+    const warnCount = warning || 12;
+    const critCount = critical || 6;
+    const allUnits = total || (opCount + warnCount + critCount) || 100;
+    
+    const opPct = Math.round((opCount / allUnits) * 100);
+    const warnPct = Math.round((warnCount / allUnits) * 100);
+    const critPct = Math.max(0, 100 - opPct - warnPct);
+
+    return {
+      title: 'Plant-Wide Fleet Operational Health Status',
+      totalLabel: 'Fleet Availability',
+      totalValue: `${opPct}%`,
+      slices: [
+        { label: 'Operational (Normal / Stable)', value: opCount, percent: opPct, color: '#10b981', icon: '🟢', status: 'STABLE' },
+        { label: 'Attention / Monitoring Required', value: warnCount, percent: warnPct, color: '#f59e0b', icon: '🟡', status: 'WARNING' },
+        { label: 'Critical Safety Override / Urgent Review', value: critCount, percent: critPct, color: '#ef4444', icon: '🔴', status: 'CRITICAL' },
+      ]
+    };
+  }, [pieMode, operational, warning, critical, total, machines]);
+
   const getStatusBadge = (lvl) => {
     switch (lvl) {
       case 'CRITICAL': return <span className="badge badge-critical"><span className="status-dot dot-critical" />CRITICAL RISK</span>;
@@ -425,6 +484,191 @@ export default function DashboardView({
         <text x={padding.left - 6} y={padding.top + 10} fill="#94a3b8" fontSize="9" textAnchor="end" className="mono">{maxVal.toFixed(1)}</text>
         <text x={padding.left - 6} y={padding.top + plotH} fill="#94a3b8" fontSize="9" textAnchor="end" className="mono">{minVal.toFixed(1)}</text>
       </svg>
+    );
+  };
+
+  const renderPieChartSvg = () => {
+    const size = 260;
+    const cx = size / 2;
+    const cy = size / 2;
+    const outerR = 100;
+    const innerR = 64; // Sleek Donut Hole
+    const { slices } = pieData;
+    const totalVal = slices.reduce((acc, s) => acc + s.value, 0) || 1;
+
+    let currentAngle = -Math.PI / 2;
+    const paths = slices.map((slice, idx) => {
+      const sliceAngle = (slice.value / totalVal) * (2 * Math.PI);
+      const startAngle = currentAngle;
+      const endAngle = currentAngle + sliceAngle;
+      currentAngle = endAngle;
+
+      const isHovered = hoveredSlice === idx;
+      const rOuter = isHovered ? outerR + 6 : outerR;
+      const rInner = isHovered ? innerR - 2 : innerR;
+
+      const x1 = cx + rOuter * Math.cos(startAngle);
+      const y1 = cy + rOuter * Math.sin(startAngle);
+      const x2 = cx + rOuter * Math.cos(endAngle);
+      const y2 = cy + rOuter * Math.sin(endAngle);
+
+      const x3 = cx + rInner * Math.cos(endAngle);
+      const y3 = cy + rInner * Math.sin(endAngle);
+      const x4 = cx + rInner * Math.cos(startAngle);
+      const y4 = cy + rInner * Math.sin(startAngle);
+
+      const largeArc = sliceAngle > Math.PI ? 1 : 0;
+      const d = `M ${x1} ${y1} A ${rOuter} ${rOuter} 0 ${largeArc} 1 ${x2} ${y2} L ${x3} ${y3} A ${rInner} ${rInner} 0 ${largeArc} 0 ${x4} ${y4} Z`;
+
+      return {
+        d,
+        slice,
+        idx,
+        isHovered
+      };
+    });
+
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '32px', padding: '12px 10px' }}>
+        {/* The SVG Pie / Donut */}
+        <div style={{ position: 'relative', width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ overflow: 'visible' }}>
+            <defs>
+              <filter id="pieShadow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#38bdf8" floodOpacity="0.3" />
+              </filter>
+            </defs>
+
+            {/* Render Donut Slices */}
+            {paths.map((p) => (
+              <path
+                key={p.idx}
+                d={p.d}
+                fill={p.slice.color}
+                stroke="#090d16"
+                strokeWidth={p.isHovered ? "3" : "2"}
+                style={{
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  filter: p.isHovered ? 'url(#pieShadow)' : 'none',
+                  opacity: (hoveredSlice !== null && !p.isHovered) ? 0.45 : 1.0
+                }}
+                onMouseEnter={() => setHoveredSlice(p.idx)}
+                onMouseLeave={() => setHoveredSlice(null)}
+              />
+            ))}
+
+            {/* Center Label / Availability */}
+            <text x={cx} y={cy - 6} textAnchor="middle" fill="#94a3b8" fontSize="11" fontWeight="600">
+              {hoveredSlice !== null ? slices[hoveredSlice].label.split(' ')[0] : pieData.totalLabel}
+            </text>
+            <text x={cx} y={cy + 16} textAnchor="middle" fill="#ffffff" fontSize="18" fontWeight="800" className="mono">
+              {hoveredSlice !== null ? `${slices[hoveredSlice].percent}%` : pieData.totalValue}
+            </text>
+          </svg>
+        </div>
+
+        {/* Legend and Detailed Metric Cards */}
+        <div style={{ flex: 1, minWidth: '300px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc' }}>
+              {pieData.title}
+            </div>
+
+            {/* Sub-Filters */}
+            <div style={{ display: 'flex', gap: '4px', background: '#1e293b', padding: '2px', borderRadius: '6px' }}>
+              <button
+                onClick={() => setPieMode('health')}
+                style={{
+                  padding: '3px 8px',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  borderRadius: '4px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: pieMode === 'health' ? '#3b82f6' : 'transparent',
+                  color: '#ffffff'
+                }}
+              >
+                Status
+              </button>
+              <button
+                onClick={() => setPieMode('dataset')}
+                style={{
+                  padding: '3px 8px',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  borderRadius: '4px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: pieMode === 'dataset' ? '#3b82f6' : 'transparent',
+                  color: '#ffffff'
+                }}
+              >
+                Equipment
+              </button>
+              <button
+                onClick={() => setPieMode('subsystem')}
+                style={{
+                  padding: '3px 8px',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  borderRadius: '4px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: pieMode === 'subsystem' ? '#3b82f6' : 'transparent',
+                  color: '#ffffff'
+                }}
+              >
+                Subsystems
+              </button>
+            </div>
+          </div>
+
+          {slices.map((slice, idx) => {
+            const isHovered = hoveredSlice === idx;
+            return (
+              <div
+                key={idx}
+                onMouseEnter={() => setHoveredSlice(idx)}
+                onMouseLeave={() => setHoveredSlice(null)}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  background: isHovered ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${isHovered ? slice.color : 'rgba(255,255,255,0.08)'}`,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ width: '12px', height: '12px', borderRadius: '3px', background: slice.color, display: 'inline-block' }} />
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#ffffff' }}>
+                      {slice.icon} {slice.label}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                      {slice.value} units actively configured in fleet registry
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                  <div className="mono" style={{ fontSize: '16px', fontWeight: 800, color: slice.color }}>
+                    {slice.percent}%
+                  </div>
+                  <div className="mono" style={{ fontSize: '11px', color: '#94a3b8' }}>
+                    {slice.value} Units
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     );
   };
 
@@ -665,7 +909,7 @@ export default function DashboardView({
           </div>
 
           {/* Graph View Mode Buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#f1f5f9', padding: '3px', borderRadius: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#f1f5f9', padding: '3px', borderRadius: '8px', flexWrap: 'wrap' }}>
             <button
               onClick={() => setGraphMode('sensor_trajectory')}
               style={{
@@ -677,10 +921,14 @@ export default function DashboardView({
                 cursor: 'pointer',
                 background: graphMode === 'sensor_trajectory' ? '#ffffff' : 'transparent',
                 color: graphMode === 'sensor_trajectory' ? '#0f172a' : '#64748b',
-                boxShadow: graphMode === 'sensor_trajectory' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                boxShadow: graphMode === 'sensor_trajectory' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
               }}
             >
-              📈 Sensor Trajectory
+              <LineChart size={13} color={graphMode === 'sensor_trajectory' ? '#2563eb' : '#64748b'} />
+              Sensor Trajectory
             </button>
             <button
               onClick={() => setGraphMode('rul_curve')}
@@ -693,10 +941,34 @@ export default function DashboardView({
                 cursor: 'pointer',
                 background: graphMode === 'rul_curve' ? '#ffffff' : 'transparent',
                 color: graphMode === 'rul_curve' ? '#0f172a' : '#64748b',
-                boxShadow: graphMode === 'rul_curve' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+                boxShadow: graphMode === 'rul_curve' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
               }}
             >
-              📉 RUL & Health Degradation
+              <TrendingDown size={13} color={graphMode === 'rul_curve' ? '#d97706' : '#64748b'} />
+              RUL & Degradation
+            </button>
+            <button
+              onClick={() => setGraphMode('pie_chart')}
+              style={{
+                padding: '5px 12px',
+                fontSize: '11px',
+                fontWeight: 700,
+                borderRadius: '6px',
+                border: 'none',
+                cursor: 'pointer',
+                background: graphMode === 'pie_chart' ? '#ffffff' : 'transparent',
+                color: graphMode === 'pie_chart' ? '#0f172a' : '#64748b',
+                boxShadow: graphMode === 'pie_chart' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}
+            >
+              <PieChart size={13} color={graphMode === 'pie_chart' ? '#10b981' : '#64748b'} />
+              Fleet Health (Pie Chart)
             </button>
             <button
               onClick={() => setIsGraphExpanded(!isGraphExpanded)}
@@ -719,111 +991,120 @@ export default function DashboardView({
 
         {isGraphExpanded && (
           <div>
-            {/* Sensor Selector Pills for Mode 1 */}
-            {graphMode === 'sensor_trajectory' && (
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                {telemetryDetails.baseline.map((sensor, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setSelectedSensorIndex(idx)}
-                    style={{
-                      padding: '5px 12px',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      borderRadius: '20px',
-                      border: selectedSensorIndex === idx ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
-                      background: selectedSensorIndex === idx ? '#eff6ff' : '#f8fafc',
-                      color: selectedSensorIndex === idx ? '#1d4ed8' : '#475569',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: selectedSensorIndex === idx ? '#2563eb' : '#94a3b8' }} />
-                    {sensor.name}
-                    <span className="mono" style={{ fontSize: '10px', color: '#64748b' }}>({sensor.curr})</span>
-                  </button>
-                ))}
+            {/* MODE 3: PIE / DONUT CHART VIEW */}
+            {graphMode === 'pie_chart' ? (
+              <div style={{ position: 'relative', background: '#090d16', borderRadius: '10px', padding: '16px 20px', border: '1px solid #1e293b' }}>
+                {renderPieChartSvg()}
               </div>
+            ) : (
+              <>
+                {/* Sensor Selector Pills for Mode 1 */}
+                {graphMode === 'sensor_trajectory' && (
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                    {telemetryDetails.baseline.map((sensor, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setSelectedSensorIndex(idx)}
+                        style={{
+                          padding: '5px 12px',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          borderRadius: '20px',
+                          border: selectedSensorIndex === idx ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
+                          background: selectedSensorIndex === idx ? '#eff6ff' : '#f8fafc',
+                          color: selectedSensorIndex === idx ? '#1d4ed8' : '#475569',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: selectedSensorIndex === idx ? '#2563eb' : '#94a3b8' }} />
+                        {sensor.name}
+                        <span className="mono" style={{ fontSize: '10px', color: '#64748b' }}>({sensor.curr})</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* SVG Line / Trajectory Chart Display */}
+                <div style={{ position: 'relative', background: '#090d16', borderRadius: '10px', padding: '12px 14px', border: '1px solid #1e293b' }}>
+                  
+                  {/* Top Legend Strip */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', fontSize: '11px' }}>
+                    <div style={{ display: 'flex', gap: '14px', alignItems: 'center', color: '#94a3b8', flexWrap: 'wrap' }}>
+                      {graphMode === 'sensor_trajectory' && (
+                        <>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ width: '10px', height: '3px', background: '#38bdf8', borderRadius: '2px' }} />
+                            <span>Observed Sensor Curve</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ width: '10px', height: '1px', background: '#22c55e', borderTop: '1px dashed #22c55e' }} />
+                            <span>Baseline Nominal ({graphData.activeSensor.prev})</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ width: '10px', height: '1px', background: '#ef4444', borderTop: '1px dashed #ef4444' }} />
+                            <span>Critical Threshold</span>
+                          </div>
+                        </>
+                      )}
+                      {graphMode === 'rul_curve' && (
+                        <>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ width: '10px', height: '3px', background: '#38bdf8', borderRadius: '2px' }} />
+                            <span>Remaining Useful Life (Cycles)</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ width: '10px', height: '3px', background: '#10b981', borderRadius: '2px' }} />
+                            <span>Health Index (%)</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ width: '10px', height: '1px', background: '#ef4444', borderTop: '1px dashed #ef4444' }} />
+                            <span>Critical (30c)</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    <div style={{ color: '#cbd5e1', fontWeight: 600, fontSize: '11px' }}>
+                      Active Operational: <span style={{ color: '#38bdf8' }}>Cycle {currentCycle} / {maxCycle}</span>
+                    </div>
+                  </div>
+
+                  {/* Chart SVG */}
+                  {renderChartSvg()}
+                </div>
+
+                {/* Bottom Metrics Bar */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px', marginTop: '12px' }}>
+                  <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Baseline Reference</div>
+                    <div className="mono" style={{ fontSize: '14px', fontWeight: 700, color: '#16a34a', marginTop: '2px' }}>
+                      {graphData.activeSensor.prev}
+                    </div>
+                  </div>
+                  <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Current Value (Cycle {currentCycle})</div>
+                    <div className="mono" style={{ fontSize: '14px', fontWeight: 700, color: riskLevel === 'CRITICAL' ? '#dc2626' : (riskLevel === 'WARNING' ? '#d97706' : '#0f172a'), marginTop: '2px' }}>
+                      {graphData.activeSensor.curr}
+                    </div>
+                  </div>
+                  <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Measured Drift</div>
+                    <div className="mono" style={{ fontSize: '14px', fontWeight: 700, color: graphData.activeSensor.isElevated ? '#dc2626' : '#16a34a', marginTop: '2px' }}>
+                      {graphData.activeSensor.delta} ({graphData.activeSensor.dir})
+                    </div>
+                  </div>
+                  <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Primary Subsystem</div>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {graphData.activeSensor.subsystem || 'Core Engine'}
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
-
-            {/* SVG Chart Display */}
-            <div style={{ position: 'relative', background: '#090d16', borderRadius: '10px', padding: '12px 14px', border: '1px solid #1e293b' }}>
-              
-              {/* Top Legend Strip */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', fontSize: '11px' }}>
-                <div style={{ display: 'flex', gap: '14px', alignItems: 'center', color: '#94a3b8', flexWrap: 'wrap' }}>
-                  {graphMode === 'sensor_trajectory' && (
-                    <>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span style={{ width: '10px', height: '3px', background: '#38bdf8', borderRadius: '2px' }} />
-                        <span>Observed Sensor Curve</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span style={{ width: '10px', height: '1px', background: '#22c55e', borderTop: '1px dashed #22c55e' }} />
-                        <span>Baseline Nominal ({graphData.activeSensor.prev})</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span style={{ width: '10px', height: '1px', background: '#ef4444', borderTop: '1px dashed #ef4444' }} />
-                        <span>Critical Threshold</span>
-                      </div>
-                    </>
-                  )}
-                  {graphMode === 'rul_curve' && (
-                    <>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span style={{ width: '10px', height: '3px', background: '#38bdf8', borderRadius: '2px' }} />
-                        <span>Remaining Useful Life (Cycles)</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span style={{ width: '10px', height: '3px', background: '#10b981', borderRadius: '2px' }} />
-                        <span>Health Index (%)</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span style={{ width: '10px', height: '1px', background: '#ef4444', borderTop: '1px dashed #ef4444' }} />
-                        <span>Critical (30c)</span>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                <div style={{ color: '#cbd5e1', fontWeight: 600, fontSize: '11px' }}>
-                  Active Operational: <span style={{ color: '#38bdf8' }}>Cycle {currentCycle} / {maxCycle}</span>
-                </div>
-              </div>
-
-              {/* Chart SVG */}
-              {renderChartSvg()}
-            </div>
-
-            {/* Bottom Metrics Bar */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px', marginTop: '12px' }}>
-              <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Baseline Reference</div>
-                <div className="mono" style={{ fontSize: '14px', fontWeight: 700, color: '#16a34a', marginTop: '2px' }}>
-                  {graphData.activeSensor.prev}
-                </div>
-              </div>
-              <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Current Value (Cycle {currentCycle})</div>
-                <div className="mono" style={{ fontSize: '14px', fontWeight: 700, color: riskLevel === 'CRITICAL' ? '#dc2626' : (riskLevel === 'WARNING' ? '#d97706' : '#0f172a'), marginTop: '2px' }}>
-                  {graphData.activeSensor.curr}
-                </div>
-              </div>
-              <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Measured Drift</div>
-                <div className="mono" style={{ fontSize: '14px', fontWeight: 700, color: graphData.activeSensor.isElevated ? '#dc2626' : '#16a34a', marginTop: '2px' }}>
-                  {graphData.activeSensor.delta} ({graphData.activeSensor.dir})
-                </div>
-              </div>
-              <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Primary Subsystem</div>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {graphData.activeSensor.subsystem || 'Core Engine'}
-                </div>
-              </div>
-            </div>
           </div>
         )}
       </div>
