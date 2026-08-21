@@ -49,7 +49,7 @@ export default function DashboardView({
 }) {
   const [selectedFeaturedId, setSelectedFeaturedId] = useState(1);
   const [evidenceExpanded, setEvidenceExpanded] = useState(false);
-  const [graphMode, setGraphMode] = useState('sensor_trajectory'); // 'sensor_trajectory' | 'rul_curve' | 'pie_chart'
+  const [graphMode, setGraphMode] = useState('pie_chart'); // Default: 'pie_chart'
   const [pieMode, setPieMode] = useState('health'); // 'health' | 'dataset' | 'subsystem'
   const [hoveredSlice, setHoveredSlice] = useState(null);
   const [selectedSensorIndex, setSelectedSensorIndex] = useState(0);
@@ -895,21 +895,41 @@ export default function DashboardView({
         {/* Graph Header with Mode Toggles */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <LineChart size={18} color="#2563eb" />
+            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <PieChart size={18} color="#10b981" />
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>
-                Prognostic Telemetry & Degradation Trajectory Graph
+                Fleet Risk & Health Distribution (Interactive Pie Chart)
               </h3>
               <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>
-                Unit #{String(unitNum).padStart(3, '0')} real-time sensor curves, baseline envelope, and RUL forecast
+                Visual breakdown of plant operational availability, active equipment datasets, and subsystem risk levels
               </p>
             </div>
           </div>
 
           {/* Graph View Mode Buttons */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#f1f5f9', padding: '3px', borderRadius: '8px', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setGraphMode('pie_chart')}
+              style={{
+                padding: '5px 12px',
+                fontSize: '11px',
+                fontWeight: 700,
+                borderRadius: '6px',
+                border: 'none',
+                cursor: 'pointer',
+                background: graphMode === 'pie_chart' ? '#ffffff' : 'transparent',
+                color: graphMode === 'pie_chart' ? '#0f172a' : '#64748b',
+                boxShadow: graphMode === 'pie_chart' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}
+            >
+              <PieChart size={13} color={graphMode === 'pie_chart' ? '#10b981' : '#64748b'} />
+              Fleet Health (Pie Chart)
+            </button>
             <button
               onClick={() => setGraphMode('sensor_trajectory')}
               style={{
@@ -949,26 +969,6 @@ export default function DashboardView({
             >
               <TrendingDown size={13} color={graphMode === 'rul_curve' ? '#d97706' : '#64748b'} />
               RUL & Degradation
-            </button>
-            <button
-              onClick={() => setGraphMode('pie_chart')}
-              style={{
-                padding: '5px 12px',
-                fontSize: '11px',
-                fontWeight: 700,
-                borderRadius: '6px',
-                border: 'none',
-                cursor: 'pointer',
-                background: graphMode === 'pie_chart' ? '#ffffff' : 'transparent',
-                color: graphMode === 'pie_chart' ? '#0f172a' : '#64748b',
-                boxShadow: graphMode === 'pie_chart' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px'
-              }}
-            >
-              <PieChart size={13} color={graphMode === 'pie_chart' ? '#10b981' : '#64748b'} />
-              Fleet Health (Pie Chart)
             </button>
             <button
               onClick={() => setIsGraphExpanded(!isGraphExpanded)}
