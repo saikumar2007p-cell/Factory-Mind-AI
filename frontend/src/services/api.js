@@ -526,3 +526,36 @@ export const getDatasetSensors = (datasetId) => request(`/datasets/${datasetId}/
 export const getDatasetTasks = (datasetId) => request(`/datasets/${datasetId}/tasks`);
 export const checkDatasetAvailability = (datasetId) => request(`/datasets/${datasetId}/availability`);
 
+// ============================================================================
+// WHATSAPP ALERT & ADMIN NOTIFICATION APIS
+// ============================================================================
+
+export const getWhatsAppSettings = () => request('/notifications/whatsapp/settings');
+
+export const updateWhatsAppSettings = (data) =>
+  request('/notifications/whatsapp/settings', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+
+export const sendWhatsAppAlert = (alertData) =>
+  request('/notifications/whatsapp/send', {
+    method: 'POST',
+    body: JSON.stringify(alertData)
+  });
+
+export const testWhatsAppAlert = (phoneNumber) =>
+  request('/notifications/whatsapp/test', {
+    method: 'POST',
+    body: JSON.stringify(phoneNumber ? { phone_number: phoneNumber } : {})
+  });
+
+export function openWhatsAppDirect(phone, message) {
+  const cleanPhone = (phone || '').replace(/[^\d+]/g, '').replace(/^\+/, '');
+  const encoded = encodeURIComponent(message || '🚨 FactoryMind AI Alert Notification');
+  const url = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encoded}` : `https://api.whatsapp.com/send?text=${encoded}`;
+  window.open(url, '_blank', 'noopener,noreferrer');
+  return url;
+}
+
+

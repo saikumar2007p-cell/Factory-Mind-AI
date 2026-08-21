@@ -6,12 +6,35 @@ import {
   Clock,
   ArrowRight,
   ShieldCheck,
-  Wrench
+  Wrench,
+  MessageSquare
 } from 'lucide-react';
-import { createWorkOrder } from '../../services/api';
+import { createWorkOrder, sendWhatsAppAlert, openWhatsAppDirect } from '../../services/api';
 
 export default function AlertsView({ alerts, onAcknowledgeAlert, onSelectMachine, userRole = 'ADMIN', searchQuery }) {
   const [filter, setFilter] = useState('ALL'); // ALL, ACTIVE, ACKNOWLEDGED
+  const [sendingWhatsAppId, setSendingWhatsAppId] = useState(null);
+
+  const handleSendWhatsApp = async (a) => {
+    try {
+      setSendingWhatsAppId(a.id);
+      const res = await sendWhatsAppAlert({
+        machine_id: a.machine_id,
+        severity: a.severity || 'CRITICAL',
+        reason: a.reason || 'Degradation anomaly detected',
+        action: `Inspect Unit #${a.machine_id} and remediate root cause`,
+        rul: a.rul,
+        health: a.health
+      });
+      if (res && res.click_url) {
+        window.open(res.click_url, '_blank', 'noopener,noreferrer');
+      }
+    } catch (err) {
+      alert('Error sending WhatsApp alert: ' + (err.message || 'Unknown error'));
+    } finally {
+      setSendingWhatsAppId(null);
+    }
+  };
 
   const filtered = alerts.filter(a => {
     if (filter === 'ACTIVE' && a.status !== 'ACTIVE') return false;
@@ -153,6 +176,26 @@ export default function AlertsView({ alerts, onAcknowledgeAlert, onSelectMachine
                             >
                               <Wrench size={12} />
                               Create WO
+                            </button>
+
+                            <button
+                              className="btn btn-sm"
+                              style={{
+                                padding: '4px 8px',
+                                background: '#10b981',
+                                color: '#ffffff',
+                                border: 'none',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                fontWeight: 700
+                              }}
+                              title="Send WhatsApp Alert to Admin Phone"
+                              disabled={sendingWhatsAppId === a.id}
+                              onClick={() => handleSendWhatsApp(a)}
+                            >
+                              <MessageSquare size={12} />
+                              {sendingWhatsAppId === a.id ? 'Sending...' : 'WhatsApp'}
                             </button>
                           </>
                         )}

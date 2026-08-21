@@ -28,9 +28,10 @@ import {
   Zap,
   Gauge,
   LineChart,
-  PieChart
+  PieChart,
+  MessageSquare
 } from 'lucide-react';
-import { getWorkOrdersSummary, getFleetSummary, getLearningOverview, getCached } from '../../services/api';
+import { getWorkOrdersSummary, getFleetSummary, getLearningOverview, getCached, sendWhatsAppAlert } from '../../services/api';
 
 export default function DashboardView({
   fleetSummary,
@@ -55,6 +56,7 @@ export default function DashboardView({
   const [selectedSensorIndex, setSelectedSensorIndex] = useState(0);
   const [hoveredPoint, setHoveredPoint] = useState(null);
   const [isGraphExpanded, setIsGraphExpanded] = useState(true);
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
   const [woSummary, setWoSummary] = useState(() => getCached('/work-orders/summary'));
   const [fleetIntel, setFleetIntel] = useState(() => getCached('/fleet/summary'));
   const [learningOverview, setLearningOverview] = useState(() => getCached('/learning/overview'));
@@ -1491,10 +1493,10 @@ export default function DashboardView({
 
           {/* Action Trigger Buttons */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               <button
                 className="btn btn-primary btn-sm"
-                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                style={{ flex: 1, minWidth: '130px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                 onClick={() => onNavigateTab && onNavigateTab('maintenance')}
               >
                 <Wrench size={14} /> Create Work Order
@@ -1502,12 +1504,54 @@ export default function DashboardView({
 
               <button
                 className="btn btn-secondary btn-sm"
-                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                style={{ flex: 1, minWidth: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                 onClick={() => onRunDiagnostics && onRunDiagnostics(activeFeaturedMachine.id || 1)}
                 disabled={diagnosticsLoading}
               >
                 <BrainCircuit size={14} color="#8b5cf6" />
                 {diagnosticsLoading ? 'Analyzing...' : 'Ask AI for Root Cause'}
+              </button>
+
+              <button
+                className="btn btn-sm"
+                style={{
+                  background: '#10b981',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  padding: '6px 14px',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+                disabled={sendingWhatsApp}
+                onClick={async () => {
+                  try {
+                    setSendingWhatsApp(true);
+                    const res = await sendWhatsAppAlert({
+                      machine_id: activeFeaturedMachine.id || 1,
+                      machine_type: datasetName || 'Industrial Turbofan Engine',
+                      severity: riskLevel || 'CRITICAL',
+                      reason: telemetryDetails.whyRaised || 'High thermal degradation observed across turbine blades',
+                      action: telemetryDetails.actionPlan || 'Inspect components and schedule thermal coating check',
+                      rul: rulEstimate,
+                      health: healthIndex
+                    });
+                    if (res && res.click_url) {
+                      window.open(res.click_url, '_blank', 'noopener,noreferrer');
+                    }
+                  } catch (err) {
+                    alert('Error sending WhatsApp alert: ' + (err.message || 'Unknown error'));
+                  } finally {
+                    setSendingWhatsApp(false);
+                  }
+                }}
+              >
+                <MessageSquare size={14} />
+                {sendingWhatsApp ? 'Sending...' : '📲 Alert Admin on WhatsApp'}
               </button>
             </div>
 

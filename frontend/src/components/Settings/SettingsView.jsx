@@ -34,6 +34,7 @@ import ModelVersionPanel from './ModelVersionPanel';
 import UserManagementPanel from './UserManagementPanel';
 import MachineRegistrationQueue from './MachineRegistrationQueue';
 import DatasetSelector from '../Datasets/DatasetSelector';
+import WhatsAppSettingsPanel from './WhatsAppSettingsPanel';
 
 export default function SettingsView({ userRole = 'ADMIN' }) {
   if (userRole !== 'ADMIN') {
@@ -278,6 +279,17 @@ export default function SettingsView({ userRole = 'ADMIN' }) {
 
         {userRole === 'ADMIN' && (
           <button
+            onClick={() => setActiveTab('whatsapp')}
+            className={`btn btn-sm ${activeTab === 'whatsapp' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: activeTab === 'whatsapp' ? '#059669' : undefined, borderColor: activeTab === 'whatsapp' ? '#059669' : undefined }}
+          >
+            <Smartphone size={15} color={activeTab === 'whatsapp' ? '#ffffff' : '#10b981'} />
+            WhatsApp Alerts
+          </button>
+        )}
+
+        {userRole === 'ADMIN' && (
+          <button
             onClick={() => setActiveTab('users')}
             className={`btn btn-sm ${activeTab === 'users' ? 'btn-primary' : 'btn-secondary'}`}
             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
@@ -296,6 +308,12 @@ export default function SettingsView({ userRole = 'ADMIN' }) {
           Security Audit Trail
         </button>
       </div>
+
+      {activeTab === 'whatsapp' && (
+        <div style={{ marginBottom: '24px' }}>
+          <WhatsAppSettingsPanel />
+        </div>
+      )}
 
       {activeTab === 'datasets' && (
         <div style={{ marginBottom: '24px' }}>

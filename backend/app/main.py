@@ -40,7 +40,8 @@ from backend.app.routers import (
     drift,
     outcomes,
     users,
-    machine_registrations
+    machine_registrations,
+    notifications
 )
 from backend.app.routers import firebase_auth
 from backend.app.routers import datasets
@@ -177,6 +178,7 @@ app.include_router(outcomes.router, prefix=api_v1_prefix)
 app.include_router(fleet.router, prefix=api_v1_prefix)
 app.include_router(continuous_learning.router, prefix=api_v1_prefix)
 app.include_router(datasets.router, prefix=api_v1_prefix)
+app.include_router(notifications.router, prefix=api_v1_prefix)
 
 
 
