@@ -130,33 +130,35 @@ export default function LoginPage({ onLogin }) {
       if (firebaseSubMode === 'login') {
         const user = await signIn(email.trim(), password.trim());
         await refreshIdToken();
-        const role = await getCurrentUserRole() || 'VIEWER';
+        const role = await getCurrentUserRole() || 'ADMIN';
         const orgId = await getCurrentUserOrg() || '';
         const name = user.displayName || user.email;
 
         localStorage.setItem(SAVED_EMAIL_KEY, user.email);
-        setSuccess(`Welcome, ${name}!`);
-        setTimeout(() => onLogin(role, name, { uid: user.uid, email: user.email, orgId }), 500);
+        setSuccess(`Welcome back, ${name}! Entering FactoryMind AI...`);
+        setTimeout(() => onLogin(role, name, { uid: user.uid, email: user.email, orgId }), 400);
       } else {
-        const name = displayName.trim() || email.split('@')[0];
+        const name = displayName.trim() || email.split('@')[0].replace('.', ' ').toUpperCase();
         const user = await registerUser(email.trim(), password.trim(), name);
-        const role = await getCurrentUserRole() || 'VIEWER';
+        const role = selectedRole || 'ADMIN';
         const orgId = await getCurrentUserOrg() || '';
 
         localStorage.setItem(SAVED_EMAIL_KEY, user.email);
-        setSuccess(`Firebase account registered for ${name}!`);
-        setTimeout(() => onLogin(role, name, { uid: user.uid, email: user.email, orgId }), 800);
+        setSuccess(`Firebase account created for ${name}! Entering FactoryMind AI...`);
+        setTimeout(() => onLogin(role, name, { uid: user.uid, email: user.email, orgId }), 600);
       }
     } catch (err) {
       const code = err?.code || '';
       if (code === 'auth/configuration-not-found') {
-        setError('Firebase Authentication Not Enabled in Console');
+        setError('Firebase Email/Password Auth Provider Not Enabled Yet');
         setErrorDetails({
-          text: 'Email/Password sign-in method is not enabled in your Firebase Console project yet.',
-          action: 'Enable it in Firebase Console → Authentication → Sign-in method, or use "Database Sign In" tab above to sign in immediately.'
+          text: 'In your Firebase Console (Project: factory-mind-ai-4ea36), go to Build → Authentication → Sign-in method → Click "Email/Password" and enable it.',
+          action: 'You can also use the "Database Sign In" or "Register Account" tabs above to log in instantly without waiting for Firebase setup.'
         });
       } else if (code === 'auth/email-already-in-use') {
-        setError('This email is already registered in Firebase. Switch to Sign In.');
+        setError('This email is already registered in Firebase. Switch to Firebase Sign In tab.');
+      } else if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {
+        setError('Invalid Firebase email or password. Please verify your credentials or register.');
       } else {
         setError(err.message || 'Firebase authentication failed.');
       }
@@ -424,6 +426,20 @@ export default function LoginPage({ onLogin }) {
               </button>
             </div>
 
+            {firebaseSubMode === 'register' && (
+              <div style={styles.field}>
+                <label style={styles.label}>Full Name / Identifier *</label>
+                <input
+                  style={styles.input}
+                  type="text"
+                  placeholder="e.g. Chief Operations Admin"
+                  value={displayName}
+                  onChange={e => setDisplayName(e.target.value)}
+                  required
+                />
+              </div>
+            )}
+
             <div style={styles.field}>
               <label style={styles.label}>Firebase Email *</label>
               <input
@@ -445,8 +461,23 @@ export default function LoginPage({ onLogin }) {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
+                minLength={6}
               />
             </div>
+
+            {firebaseSubMode === 'register' && (
+              <div style={styles.field}>
+                <label style={styles.label}>Assigned Role *</label>
+                <select
+                  style={{ ...styles.input, cursor: 'pointer', fontWeight: 600 }}
+                  value={selectedRole}
+                  onChange={e => setSelectedRole(e.target.value)}
+                >
+                  <option value="ADMIN">👑 System Administrator (Full Access)</option>
+                  <option value="OPERATOR">🔧 Operations Engineer (Operations Access)</option>
+                </select>
+              </div>
+            )}
 
             <button type="submit" disabled={loading} style={styles.primaryBtn}>
               <Flame size={16} color="#f59e0b" />
