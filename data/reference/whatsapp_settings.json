@@ -5,7 +5,12 @@
   "auto_send_enabled": true,
   "notify_on_critical": true,
   "notify_on_warning": true,
-  "provider": "direct_whatsapp",
+  "provider": "exotel",
+  "exotel_api_key": "1a8b86a55a41a3f8936fd8e6eed1dbed4e969de265670307",
+  "exotel_api_token": "f6dad415da3eaec7d0539622ef4943d90d303490d4cf62ef",
+  "exotel_account_sid": "1a8b86a55a41a3f8936fd8e6eed1dbed4e969de265670307",
+  "exotel_subdomain": "api.exotel.com",
+  "exotel_sender_id": "08047104710",
   "callmebot_api_key": "",
   "webhook_url": "",
   "twilio_account_sid": "",
@@ -13,7 +18,7 @@
   "twilio_from_number": "whatsapp:+14155238886",
   "meta_phone_number_id": "",
   "meta_access_token": "",
-  "last_alert_sent_at": "2026-08-21T11:04:34.578765+00:00",
-  "total_alerts_dispatched": 7,
-  "updated_at": "2026-08-21T11:04:34.582036+00:00"
+  "last_alert_sent_at": "2026-08-21T11:15:36.151174+00:00",
+  "total_alerts_dispatched": 8,
+  "updated_at": "2026-08-21T11:15:37.488016+00:00"
 }

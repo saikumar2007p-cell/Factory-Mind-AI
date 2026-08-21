@@ -553,7 +553,10 @@ export const testWhatsAppAlert = (phoneNumber) =>
 export const getWhatsAppLogs = () => request('/notifications/whatsapp/logs');
 
 export function openWhatsAppDirect(phone, message) {
-  const cleanPhone = (phone || '').replace(/[^\d+]/g, '').replace(/^\+/, '');
+  let cleanPhone = (phone || '').replace(/[^\d+]/g, '').replace(/^\+/, '');
+  if (cleanPhone.length === 10 && /^[6789]/.test(cleanPhone)) {
+    cleanPhone = `91${cleanPhone}`;
+  }
   const encoded = encodeURIComponent(message || '🚨 FactoryMind AI Alert Notification');
   const url = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encoded}` : `https://api.whatsapp.com/send?text=${encoded}`;
   window.open(url, '_blank', 'noopener,noreferrer');

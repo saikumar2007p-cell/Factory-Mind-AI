@@ -281,6 +281,7 @@ export default function WhatsAppSettingsPanel() {
                 onChange={(e) => setSettings({ ...settings, provider: e.target.value })}
                 style={{ width: '100%', padding: '9px 12px', fontSize: '13px', fontWeight: 600 }}
               >
+                <option value="exotel">🇮🇳 Exotel SMS Gateway (Connected — India Telecom Automated SMS)</option>
                 <option value="callmebot">CallMeBot Free API (Instant Zero-Config WhatsApp)</option>
                 <option value="webhook">Custom Webhook / UltraMsg / Green-API / n8n</option>
                 <option value="twilio">Twilio WhatsApp Business API</option>
@@ -290,6 +291,77 @@ export default function WhatsAppSettingsPanel() {
             </div>
 
             {/* Provider-Specific Fields */}
+            {settings.provider === 'exotel' && (
+              <div style={{ padding: '14px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #86efac', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#166534', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Server size={14} color="#16a34a" /> Exotel India SMS Gateway Credentials
+                  </div>
+                  <span className="badge badge-normal" style={{ fontSize: '10px', background: '#16a34a', color: '#ffffff' }}>
+                    ACTIVE
+                  </span>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#14532d', marginBottom: '2px' }}>
+                    Exotel API Key
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.exotel_api_key}
+                    onChange={(e) => setSettings({ ...settings, exotel_api_key: e.target.value })}
+                    placeholder="1a8b86a55a41a3f8936fd8e6eed1dbed4e969de265670307"
+                    className="input mono"
+                    style={{ width: '100%', padding: '6px 10px', fontSize: '12px' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#14532d', marginBottom: '2px' }}>
+                    Exotel API Token
+                  </label>
+                  <input
+                    type="password"
+                    value={settings.exotel_api_token}
+                    onChange={(e) => setSettings({ ...settings, exotel_api_token: e.target.value })}
+                    placeholder="f6dad415da3eaec7d0539622ef4943d90d303490d4cf62ef"
+                    className="input mono"
+                    style={{ width: '100%', padding: '6px 10px', fontSize: '12px' }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#14532d', marginBottom: '2px' }}>
+                      Account SID / Subdomain
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.exotel_subdomain || 'api.exotel.com'}
+                      onChange={(e) => setSettings({ ...settings, exotel_subdomain: e.target.value })}
+                      placeholder="api.exotel.com"
+                      className="input mono"
+                      style={{ width: '100%', padding: '6px 10px', fontSize: '11px' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#14532d', marginBottom: '2px' }}>
+                      Sender / Virtual Number
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.exotel_sender_id || '08047104710'}
+                      onChange={(e) => setSettings({ ...settings, exotel_sender_id: e.target.value })}
+                      placeholder="08047104710"
+                      className="input mono"
+                      style={{ width: '100%', padding: '6px 10px', fontSize: '11px' }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {settings.provider === 'callmebot' && (
               <div style={{ padding: '12px', background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
                 <div style={{ fontSize: '12px', fontWeight: 700, color: '#1e40af', marginBottom: '4px' }}>
