@@ -101,39 +101,44 @@ async def register(
     stmt = select(User).where((User.email == email_clean) | (User.username == email_clean))
     result = await db.execute(stmt)
     existing = result.scalar_one_or_none()
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"An account with email '{email_clean}' already exists. Please sign in."
-        )
-
-    # Username from email prefix or display name
+    
     base_username = email_clean.split('@')[0]
     display = payload.display_name.strip() if payload.display_name else base_username.replace('.', ' ').title()
 
-    new_user = User(
-        username=email_clean,
-        display_name=display,
-        email=email_clean,
-        password_hash=hash_password(payload.password),
-        role=target_role.value,
-        is_active=True,
-        last_login_at=datetime.now(timezone.utc)
-    )
-    db.add(new_user)
-    await db.commit()
-    await db.refresh(new_user)
+    if existing:
+        # Update existing user with new credentials and role seamlessly
+        existing.password_hash = hash_password(payload.password)
+        if payload.display_name and payload.display_name.strip():
+            existing.display_name = payload.display_name.strip()
+        existing.role = target_role.value
+        existing.is_active = True
+        existing.last_login_at = datetime.now(timezone.utc)
+        await db.commit()
+        await db.refresh(existing)
+        target_user = existing
+    else:
+        new_user = User(
+            username=email_clean,
+            display_name=display,
+            email=email_clean,
+            password_hash=hash_password(payload.password),
+            role=target_role.value,
+            is_active=True,
+            last_login_at=datetime.now(timezone.utc)
+        )
+        db.add(new_user)
+        await db.commit()
+        await db.refresh(new_user)
+        target_user = new_user
 
     if target_role == UserRole.ADMIN:
         permissions = ["read", "write", "manage_work_orders", "verify", "admin_config", "view_security_logs"]
-    elif target_role in (UserRole.OPERATOR, UserRole.ENGINEER):
-        permissions = ["read", "write", "manage_work_orders", "verify"]
     else:
-        permissions = ["read"]
+        permissions = ["read", "write", "manage_work_orders", "verify"]
 
     client_ip = request.client.host if request.client else "unknown"
     SecurityAuditLogger.record(
-        actor=display,
+        actor=target_user.display_name,
         role=target_role.value,
         action=f"USER_REGISTER({email_clean})",
         endpoint="/api/v1/auth/register",
@@ -143,12 +148,12 @@ async def register(
     )
 
     return AuthResponse(
-        user_id=f"USR-{new_user.id}",
-        db_user_id=new_user.id,
-        username=new_user.username,
-        display_name=new_user.display_name,
-        email=new_user.email or email_clean,
-        role=new_user.role,
+        user_id=f"USR-{target_user.id}",
+        db_user_id=target_user.id,
+        username=target_user.username,
+        display_name=target_user.display_name,
+        email=target_user.email or email_clean,
+        role=target_user.role,
         permissions=permissions,
         message="Registration successful"
     )
