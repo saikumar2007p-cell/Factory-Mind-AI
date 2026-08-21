@@ -17,7 +17,7 @@ import { getWhatsAppSettings, updateWhatsAppSettings, testWhatsAppAlert, openWha
 
 export default function WhatsAppSettingsPanel() {
   const [settings, setSettings] = useState({
-    admin_phone_number: '+1 (555) 019-2834',
+    admin_phone_number: '+91 6303736452',
     admin_name: 'Factory Administrator',
     whatsapp_enabled: true,
     notify_on_critical: true,

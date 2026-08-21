@@ -6,7 +6,7 @@
   "notify_on_warning": true,
   "webhook_url": "",
   "provider": "direct_whatsapp",
-  "last_alert_sent_at": "2026-08-21T10:37:39.442379+00:00",
-  "total_alerts_dispatched": 2,
-  "updated_at": "2026-08-21T10:37:39.442691+00:00"
+  "last_alert_sent_at": "2026-08-21T10:42:16.574768+00:00",
+  "total_alerts_dispatched": 1,
+  "updated_at": "2026-08-21T10:42:16.575134+00:00"
 }

@@ -21,7 +21,7 @@ logger = logging.getLogger("factorymind.whatsapp")
 SETTINGS_FILE = Path(__file__).resolve().parent.parent.parent.parent / "data" / "reference" / "whatsapp_settings.json"
 
 DEFAULT_SETTINGS = {
-    "admin_phone_number": "+15550192834",
+    "admin_phone_number": "+91 6303736452",
     "admin_name": "Factory Administrator",
     "whatsapp_enabled": True,
     "notify_on_critical": True,
@@ -69,12 +69,15 @@ class WhatsAppService:
 
     @staticmethod
     def clean_phone_number(phone: str) -> str:
-        """Strips formatting and ensures clean international digits."""
+        """Strips formatting, handles 10-digit mobile numbers with default +91, and ensures clean international digits."""
         if not phone:
             return ""
         digits = re.sub(r"[^\d+]", "", phone.strip())
         if digits.startswith("+"):
-            return digits[1:]
+            digits = digits[1:]
+        # If 10 digits starting with 6, 7, 8, or 9 (Standard Indian Mobile Number), prepend country code 91
+        if len(digits) == 10 and digits[0] in "6789":
+            return f"91{digits}"
         return digits
 
     def format_alert_message(
