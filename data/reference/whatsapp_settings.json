@@ -2,11 +2,18 @@
   "admin_phone_number": "+919876543210",
   "admin_name": "Chief Plant Officer",
   "whatsapp_enabled": true,
+  "auto_send_enabled": true,
   "notify_on_critical": true,
   "notify_on_warning": true,
-  "webhook_url": "",
   "provider": "direct_whatsapp",
-  "last_alert_sent_at": "2026-08-21T10:42:16.574768+00:00",
-  "total_alerts_dispatched": 1,
-  "updated_at": "2026-08-21T10:42:16.575134+00:00"
+  "callmebot_api_key": "",
+  "webhook_url": "",
+  "twilio_account_sid": "",
+  "twilio_auth_token": "",
+  "twilio_from_number": "whatsapp:+14155238886",
+  "meta_phone_number_id": "",
+  "meta_access_token": "",
+  "last_alert_sent_at": "2026-08-21T10:49:17.618757+00:00",
+  "total_alerts_dispatched": 3,
+  "updated_at": "2026-08-21T10:49:17.619111+00:00"
 }

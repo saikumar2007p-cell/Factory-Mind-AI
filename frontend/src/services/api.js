@@ -550,6 +550,8 @@ export const testWhatsAppAlert = (phoneNumber) =>
     body: JSON.stringify(phoneNumber ? { phone_number: phoneNumber } : {})
   });
 
+export const getWhatsAppLogs = () => request('/notifications/whatsapp/logs');
+
 export function openWhatsAppDirect(phone, message) {
   const cleanPhone = (phone || '').replace(/[^\d+]/g, '').replace(/^\+/, '');
   const encoded = encodeURIComponent(message || '🚨 FactoryMind AI Alert Notification');

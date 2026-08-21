@@ -1,0 +1,50 @@
+[
+  {
+    "timestamp": "2026-08-21T10:48:52.554127+00:00",
+    "machine_id": 5,
+    "severity": "CRITICAL",
+    "phone_number": "+919876543210",
+    "clean_phone": "919876543210",
+    "provider": "direct_whatsapp",
+    "status": "AUTOMATED_READY",
+    "gateway_response": "Direct Deep Link & Internal Dispatch Queue Active",
+    "click_url": "https://wa.me/919876543210?text=%F0%9F%9A%A8%20%2AFactoryMind%20AI%20%E2%80%94%20URGENT%20CRITICAL%20ALERT%2A%20%F0%9F%9A%A8%0A%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%0A%F0%9F%8F%AD%20%2AMachine%2A%3A%20Unit%20%23005%20%28Industrial%20Gearbox%29%0A%E2%9A%A0%EF%B8%8F%20%2ASeverity%2A%3A%20%2ACRITICAL%2A%0A%F0%9F%93%89%20%2AEstimated%20Life%20Left%2A%3A%2019.4%20cycles%0A%F0%9F%A9%BA%20%2ACurrent%20Machine%20Health%2A%3A%2048.0%25%0A%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%0A%F0%9F%94%8D%20%2ADiagnosed%20Cause%2A%3A%0AShaft%20vibration%20harmonic%20spike%20detected%0A%0A%F0%9F%9B%A0%EF%B8%8F%20%2ARecommended%20Action%2A%3A%0AGrease%20bearings%20and%20check%20gear%20teeth%20clearance%0A%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%0A%E2%8F%B1%EF%B8%8F%20%2ALogged%20At%2A%3A%202026-08-21%2010%3A48%3A52%20UTC%0A%F0%9F%94%97%20%2AOpen%20Live%20Dashboard%2A%3A%20http%3A//localhost%3A3000",
+    "message_preview": "\ud83d\udea8 *FactoryMind AI \u2014 URGENT CRITICAL ALERT* \ud83d\udea8\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\ud83c\udfed *Machine*: Unit #005 (Industrial Gearbox)\n\u26a0\ufe0f *Se..."
+  },
+  {
+    "timestamp": "2026-08-21T10:48:52.946896+00:00",
+    "machine_id": 0,
+    "severity": "TEST",
+    "phone_number": "+15550001122",
+    "clean_phone": "15550001122",
+    "provider": "direct_whatsapp",
+    "status": "AUTOMATED_TEST_SENT",
+    "gateway_response": "OK",
+    "click_url": "https://wa.me/15550001122?text=%F0%9F%A4%96%20%2AFactoryMind%20AI%20%E2%80%94%20Automated%20WhatsApp%20Bot%20Active%21%2A%20%F0%9F%A4%96%0A%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%0A%F0%9F%91%8B%20Hello%20Administrator%2C%0A%0AAutomated%20WhatsApp%20messaging%20is%20fully%20configured%20for%20%2A%2B15550001122%2A.%0A%0A%F0%9F%9A%80%20%2AActive%20Automated%20Engines%2A%3A%0A%E2%80%A2%20%E2%9A%A1%20Auto-Send%20on%20Critical%20Anomaly%3A%20%2AENABLED%2A%0A%E2%80%A2%20%F0%9F%A7%A0%20AI%20Root-Cause%20Diagnostic%20Reports%3A%20%2AENABLED%2A%0A%E2%80%A2%20%F0%9F%9B%A0%EF%B8%8F%20Prescriptive%20Step-by-Step%20Fixes%3A%20%2AENABLED%2A%0A%E2%80%A2%20%F0%9F%93%8A%20Real-Time%20C-MAPSS%20Telemetry%20Link%3A%20%2AENABLED%2A%0A%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%0A%E2%8F%B1%EF%B8%8F%20%2AVerified%20At%2A%3A%202026-08-21%2010%3A48%3A52%20UTC%0A%F0%9F%94%97%20%2AFactory%20Dashboard%2A%3A%20http%3A//localhost%3A3000",
+    "message_preview": "Automated verification message sent."
+  },
+  {
+    "timestamp": "2026-08-21T10:49:17.618757+00:00",
+    "machine_id": 5,
+    "severity": "CRITICAL",
+    "phone_number": "+919876543210",
+    "clean_phone": "919876543210",
+    "provider": "direct_whatsapp",
+    "status": "AUTOMATED_READY",
+    "gateway_response": "Direct Deep Link & Internal Dispatch Queue Active",
+    "click_url": "https://wa.me/919876543210?text=%F0%9F%9A%A8%20%2AFactoryMind%20AI%20%E2%80%94%20URGENT%20CRITICAL%20ALERT%2A%20%F0%9F%9A%A8%0A%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%0A%F0%9F%8F%AD%20%2AMachine%2A%3A%20Unit%20%23005%20%28Industrial%20Gearbox%29%0A%E2%9A%A0%EF%B8%8F%20%2ASeverity%2A%3A%20%2ACRITICAL%2A%0A%F0%9F%93%89%20%2AEstimated%20Life%20Left%2A%3A%2019.4%20cycles%0A%F0%9F%A9%BA%20%2ACurrent%20Machine%20Health%2A%3A%2048.0%25%0A%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%0A%F0%9F%94%8D%20%2ADiagnosed%20Cause%2A%3A%0AShaft%20vibration%20harmonic%20spike%20detected%0A%0A%F0%9F%9B%A0%EF%B8%8F%20%2ARecommended%20Action%2A%3A%0AGrease%20bearings%20and%20check%20gear%20teeth%20clearance%0A%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%0A%E2%8F%B1%EF%B8%8F%20%2ALogged%20At%2A%3A%202026-08-21%2010%3A49%3A17%20UTC%0A%F0%9F%94%97%20%2AOpen%20Live%20Dashboard%2A%3A%20http%3A//localhost%3A3000",
+    "message_preview": "\ud83d\udea8 *FactoryMind AI \u2014 URGENT CRITICAL ALERT* \ud83d\udea8\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\ud83c\udfed *Machine*: Unit #005 (Industrial Gearbox)\n\u26a0\ufe0f *Se..."
+  },
+  {
+    "timestamp": "2026-08-21T10:49:17.646149+00:00",
+    "machine_id": 0,
+    "severity": "TEST",
+    "phone_number": "+15550001122",
+    "clean_phone": "15550001122",
+    "provider": "direct_whatsapp",
+    "status": "AUTOMATED_TEST_SENT",
+    "gateway_response": "OK",
+    "click_url": "https://wa.me/15550001122?text=%F0%9F%A4%96%20%2AFactoryMind%20AI%20%E2%80%94%20Automated%20WhatsApp%20Bot%20Active%21%2A%20%F0%9F%A4%96%0A%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%0A%F0%9F%91%8B%20Hello%20Administrator%2C%0A%0AAutomated%20WhatsApp%20messaging%20is%20fully%20configured%20for%20%2A%2B15550001122%2A.%0A%0A%F0%9F%9A%80%20%2AActive%20Automated%20Engines%2A%3A%0A%E2%80%A2%20%E2%9A%A1%20Auto-Send%20on%20Critical%20Anomaly%3A%20%2AENABLED%2A%0A%E2%80%A2%20%F0%9F%A7%A0%20AI%20Root-Cause%20Diagnostic%20Reports%3A%20%2AENABLED%2A%0A%E2%80%A2%20%F0%9F%9B%A0%EF%B8%8F%20Prescriptive%20Step-by-Step%20Fixes%3A%20%2AENABLED%2A%0A%E2%80%A2%20%F0%9F%93%8A%20Real-Time%20C-MAPSS%20Telemetry%20Link%3A%20%2AENABLED%2A%0A%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%0A%E2%8F%B1%EF%B8%8F%20%2AVerified%20At%2A%3A%202026-08-21%2010%3A49%3A17%20UTC%0A%F0%9F%94%97%20%2AFactory%20Dashboard%2A%3A%20http%3A//localhost%3A3000",
+    "message_preview": "Automated verification message sent."
+  }
+]

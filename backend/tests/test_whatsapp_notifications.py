@@ -108,3 +108,14 @@ async def test_test_whatsapp_verification():
         data = res.json()
         assert data["success"] is True
         assert "wa.me/15550001122" in data["click_url"]
+
+
+@pytest.mark.asyncio
+async def test_whatsapp_logs_api():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        res = await client.get("/api/v1/notifications/whatsapp/logs")
+        assert res.status_code == 200
+        data = res.json()
+        assert "logs" in data
+        assert isinstance(data["logs"], list)

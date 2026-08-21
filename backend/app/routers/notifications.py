@@ -2,13 +2,13 @@
 backend/app/routers/notifications.py
 
 WhatsApp Alert & Notification API endpoints for FactoryMind AI.
-Allows configuring Admin WhatsApp phone number, dispatching instant failure alerts,
-and generating verified Click-to-Chat links.
+Allows configuring Admin WhatsApp phone number, dispatching automated failure alerts,
+and auditing background delivery logs.
 """
 
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, Field
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Query
 
 from backend.app.services.whatsapp_service import WhatsAppService
 from backend.app.security import AuthUser, require_role
@@ -20,9 +20,17 @@ class WhatsAppSettingsUpdate(BaseModel):
     admin_phone_number: Optional[str] = Field(default=None, description="Admin WhatsApp Phone Number with international prefix")
     admin_name: Optional[str] = Field(default=None, description="Admin Full Name")
     whatsapp_enabled: Optional[bool] = Field(default=None, description="Master toggle for WhatsApp notifications")
+    auto_send_enabled: Optional[bool] = Field(default=None, description="Automatically dispatch alerts in background without clicking")
     notify_on_critical: Optional[bool] = Field(default=None, description="Send WhatsApp on Critical alerts")
     notify_on_warning: Optional[bool] = Field(default=None, description="Send WhatsApp on Warning alerts")
-    webhook_url: Optional[str] = Field(default=None, description="Optional custom Webhook/Twilio endpoint")
+    provider: Optional[str] = Field(default=None, description="callmebot | webhook | twilio | meta_cloud | direct_whatsapp")
+    callmebot_api_key: Optional[str] = Field(default=None, description="CallMeBot free API Key")
+    webhook_url: Optional[str] = Field(default=None, description="Optional custom Webhook/UltraMsg/GreenAPI endpoint")
+    twilio_account_sid: Optional[str] = Field(default=None, description="Twilio Account SID")
+    twilio_auth_token: Optional[str] = Field(default=None, description="Twilio Auth Token")
+    twilio_from_number: Optional[str] = Field(default=None, description="Twilio WhatsApp sender number")
+    meta_phone_number_id: Optional[str] = Field(default=None, description="Meta Cloud API Phone Number ID")
+    meta_access_token: Optional[str] = Field(default=None, description="Meta Cloud API Access Token")
 
 
 class WhatsAppAlertRequest(BaseModel):
@@ -52,7 +60,7 @@ async def update_whatsapp_settings(
     payload: WhatsAppSettingsUpdate,
     user: AuthUser = Depends(require_role(["admin"]))
 ):
-    """Updates Admin WhatsApp phone number and notification triggers."""
+    """Updates Admin WhatsApp phone number, automated gateway, and notification triggers."""
     service = WhatsAppService()
     updates = {k: v for k, v in payload.dict().items() if v is not None}
     updated = service.update_settings(updates)
@@ -63,14 +71,27 @@ async def update_whatsapp_settings(
     }
 
 
+@router.get("/whatsapp/logs")
+async def get_whatsapp_logs(
+    limit: int = Query(default=30, ge=1, le=100)
+):
+    """Retrieves chronological history of automated WhatsApp dispatches."""
+    service = WhatsAppService()
+    logs = service.get_dispatch_logs(limit=limit)
+    return {
+        "total": len(logs),
+        "logs": logs
+    }
+
+
 @router.post("/whatsapp/send")
 async def send_whatsapp_alert(
     payload: WhatsAppAlertRequest,
     user: AuthUser = Depends(require_role(["admin", "operator"]))
 ):
-    """Dispatches/formats an immediate WhatsApp failure alert to the Admin's phone."""
+    """Dispatches/formats an immediate automated WhatsApp failure alert to the Admin's phone."""
     service = WhatsAppService()
-    result = service.send_alert(
+    result = await service.send_automated_alert(
         machine_id=payload.machine_id,
         machine_type=payload.machine_type,
         severity=payload.severity,
@@ -88,8 +109,8 @@ async def test_whatsapp_connection(
     payload: Optional[WhatsAppTestRequest] = None,
     user: AuthUser = Depends(require_role(["admin"]))
 ):
-    """Sends a verification test WhatsApp alert to the Admin phone number."""
+    """Sends an automated verification test WhatsApp alert to the Admin phone number."""
     service = WhatsAppService()
     target_phone = payload.phone_number if payload else None
-    result = service.send_test_message(phone=target_phone)
+    result = await service.send_automated_test(phone=target_phone)
     return result
