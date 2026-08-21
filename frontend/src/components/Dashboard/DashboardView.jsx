@@ -26,7 +26,8 @@ import {
   BarChart3,
   Flame,
   Zap,
-  Gauge
+  Gauge,
+  LineChart
 } from 'lucide-react';
 import { getWorkOrdersSummary, getFleetSummary, getLearningOverview, getCached } from '../../services/api';
 
@@ -47,6 +48,10 @@ export default function DashboardView({
 }) {
   const [selectedFeaturedId, setSelectedFeaturedId] = useState(1);
   const [evidenceExpanded, setEvidenceExpanded] = useState(false);
+  const [graphMode, setGraphMode] = useState('sensor_trajectory'); // 'sensor_trajectory' | 'rul_curve' | 'multi_sensor'
+  const [selectedSensorIndex, setSelectedSensorIndex] = useState(0);
+  const [hoveredPoint, setHoveredPoint] = useState(null);
+  const [isGraphExpanded, setIsGraphExpanded] = useState(true);
   const [woSummary, setWoSummary] = useState(() => getCached('/work-orders/summary'));
   const [fleetIntel, setFleetIntel] = useState(() => getCached('/fleet/summary'));
   const [learningOverview, setLearningOverview] = useState(() => getCached('/learning/overview'));
@@ -210,6 +215,68 @@ export default function DashboardView({
     };
   }, [machineType, riskLevel, isUnit1, sim, rulEstimate]);
 
+  // Generate Trajectory & Telemetry Graph Points
+  const graphData = useMemo(() => {
+    const totalSteps = 24;
+    const stepSize = Math.max(1, Math.floor(maxCycle / totalSteps));
+    const baselineSensors = telemetryDetails.baseline || [];
+    const activeSensorObj = baselineSensors[selectedSensorIndex] || baselineSensors[0] || { name: 'Sensor Telemetry', prev: '100', curr: '105' };
+    
+    // Parse baseline and curr values for scaling
+    const prevNum = parseFloat(String(activeSensorObj.prev).replace(/[^0-9.-]/g, '')) || 100;
+    const currNum = parseFloat(String(activeSensorObj.curr).replace(/[^0-9.-]/g, '')) || (prevNum * 1.05);
+    const deltaTotal = currNum - prevNum;
+    const unitMatch = String(activeSensorObj.curr).match(/[^\d.-]+/);
+    const unitStr = unitMatch ? unitMatch[0].trim() : '';
+
+    const points = [];
+    for (let i = 0; i <= totalSteps; i++) {
+      const cyc = Math.min(maxCycle, Math.max(1, Math.round(i * stepSize)));
+      const fraction = cyc / maxCycle;
+      
+      // Physics-grounded degradation progression curve
+      const driftFraction = cyc <= currentCycle 
+        ? Math.pow(cyc / Math.max(1, currentCycle), 1.35)
+        : 1.0 + Math.pow((cyc - currentCycle) / Math.max(1, maxCycle - currentCycle), 1.25) * (riskLevel === 'CRITICAL' ? 0.45 : (riskLevel === 'WARNING' ? 0.28 : 0.08));
+      
+      const val = prevNum + deltaTotal * driftFraction;
+      
+      // RUL at this cycle
+      const baselineMaxRul = 125.0;
+      const degradationRate = riskLevel === 'CRITICAL' ? 1.32 : (riskLevel === 'WARNING' ? 1.12 : 0.96);
+      const rulVal = Math.max(0, baselineMaxRul - (cyc * (baselineMaxRul / maxCycle)) * degradationRate);
+      
+      // Health index at this cycle (%)
+      const healthDrop = riskLevel === 'CRITICAL' ? 82 : (riskLevel === 'WARNING' ? 54 : 12);
+      const healthVal = Math.max(10, 100 - Math.pow(fraction, 1.45) * healthDrop);
+
+      points.push({
+        cycle: cyc,
+        val: Number(val.toFixed(2)),
+        rul: Number(rulVal.toFixed(1)),
+        health: Number(healthVal.toFixed(1)),
+        isPastOrCurrent: cyc <= currentCycle,
+        isCurrent: Math.abs(cyc - currentCycle) <= (stepSize / 2) || (i === 0 && currentCycle === 1)
+      });
+    }
+
+    const vals = points.map(p => p.val);
+    const minVal = Math.min(...vals);
+    const maxVal = Math.max(...vals);
+    const valRange = (maxVal - minVal) || 1;
+
+    return {
+      points,
+      activeSensor: activeSensorObj,
+      prevNum,
+      currNum,
+      unitStr,
+      minVal: minVal - valRange * 0.08,
+      maxVal: maxVal + valRange * 0.08,
+      valRange: (maxVal - minVal) * 1.16 || 1
+    };
+  }, [maxCycle, currentCycle, telemetryDetails, selectedSensorIndex, riskLevel]);
+
   const getStatusBadge = (lvl) => {
     switch (lvl) {
       case 'CRITICAL': return <span className="badge badge-critical"><span className="status-dot dot-critical" />CRITICAL RISK</span>;
@@ -218,6 +285,147 @@ export default function DashboardView({
       case 'MONITOR': return <span className="badge badge-warning"><span className="status-dot dot-warning" />ATTENTION REQUIRED</span>;
       default: return <span className="badge badge-normal"><span className="status-dot dot-normal" />NORMAL / STABLE</span>;
     }
+  };
+
+  const renderChartSvg = () => {
+    const width = 760;
+    const height = 180;
+    const padding = { top: 15, right: 25, bottom: 25, left: 45 };
+    const plotW = width - padding.left - padding.right;
+    const plotH = height - padding.top - padding.bottom;
+
+    if (graphMode === 'rul_curve') {
+      // Points for RUL curve
+      const maxRul = 140;
+      const ptsRul = graphData.points.map(p => {
+        const x = padding.left + ((p.cycle - 1) / (maxCycle - 1)) * plotW;
+        const y = padding.top + plotH - (p.rul / maxRul) * plotH;
+        return { x, y, p };
+      });
+      const ptsHealth = graphData.points.map(p => {
+        const x = padding.left + ((p.cycle - 1) / (maxCycle - 1)) * plotW;
+        const y = padding.top + plotH - (p.health / 100) * plotH;
+        return { x, y, p };
+      });
+
+      const polyRul = ptsRul.map(pt => `${pt.x},${pt.y}`).join(' ');
+      const polyHealth = ptsHealth.map(pt => `${pt.x},${pt.y}`).join(' ');
+      const areaRul = `M ${ptsRul[0].x},${padding.top + plotH} ` + ptsRul.map(pt => `L ${pt.x},${pt.y}`).join(' ') + ` L ${ptsRul[ptsRul.length-1].x},${padding.top + plotH} Z`;
+
+      const currX = padding.left + ((currentCycle - 1) / (maxCycle - 1)) * plotW;
+      const critY = padding.top + plotH - (30 / maxRul) * plotH;
+      const warnY = padding.top + plotH - (60 / maxRul) * plotH;
+
+      return (
+        <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} style={{ overflow: 'visible' }}>
+          <defs>
+            <linearGradient id="rulAreaGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.25" />
+              <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.0" />
+            </linearGradient>
+          </defs>
+
+          {/* Alert Zones */}
+          <rect x={padding.left} y={critY} width={plotW} height={padding.top + plotH - critY} fill="rgba(239, 68, 68, 0.08)" />
+          <rect x={padding.left} y={warnY} width={plotW} height={critY - warnY} fill="rgba(245, 158, 11, 0.06)" />
+
+          {/* Grid lines */}
+          <line x1={padding.left} y1={critY} x2={width - padding.right} y2={critY} stroke="#ef4444" strokeDasharray="3 3" strokeOpacity="0.6" />
+          <text x={padding.left + 6} y={critY - 4} fill="#ef4444" fontSize="9" fontWeight="700">CRITICAL LIMIT (30c)</text>
+
+          <line x1={padding.left} y1={warnY} x2={width - padding.right} y2={warnY} stroke="#f59e0b" strokeDasharray="3 3" strokeOpacity="0.6" />
+          <text x={padding.left + 6} y={warnY - 4} fill="#f59e0b" fontSize="9" fontWeight="700">WARNING LIMIT (60c)</text>
+
+          {/* Area under RUL */}
+          <path d={areaRul} fill="url(#rulAreaGrad)" />
+
+          {/* RUL Polyline */}
+          <polyline fill="none" stroke="#38bdf8" strokeWidth="2.5" points={polyRul} />
+
+          {/* Health Index Polyline */}
+          <polyline fill="none" stroke="#10b981" strokeWidth="2" strokeDasharray="4 2" points={polyHealth} />
+
+          {/* Live Cycle Indicator Line */}
+          <line x1={currX} y1={padding.top} x2={currX} y2={padding.top + plotH} stroke="#ffffff" strokeWidth="1.5" strokeDasharray="2 2" />
+          <circle cx={currX} cy={padding.top + plotH - (rulEstimate / maxRul) * plotH} r="5" fill="#38bdf8" stroke="#ffffff" strokeWidth="2" />
+          <circle cx={currX} cy={padding.top + plotH - (healthIndex / 100) * plotH} r="4" fill="#10b981" stroke="#ffffff" strokeWidth="1.5" />
+
+          {/* X Axis ticks */}
+          <text x={padding.left} y={height - 6} fill="#64748b" fontSize="10">Cycle 1</text>
+          <text x={width / 2} y={height - 6} fill="#64748b" fontSize="10" textAnchor="middle">Cycle {Math.round(maxCycle / 2)}</text>
+          <text x={width - padding.right} y={height - 6} fill="#64748b" fontSize="10" textAnchor="end">Cycle {maxCycle}</text>
+        </svg>
+      );
+    }
+
+    // Default: Mode 1 (Sensor Trajectory) or Mode 3 (Multi-Channel)
+    const { points, minVal, maxVal, valRange, prevNum, currNum, unitStr } = graphData;
+    const pts = points.map(p => {
+      const x = padding.left + ((p.cycle - 1) / (maxCycle - 1)) * plotW;
+      const y = padding.top + plotH - ((p.val - minVal) / valRange) * plotH;
+      return { x, y, p };
+    });
+
+    const poly = pts.map(pt => `${pt.x},${pt.y}`).join(' ');
+    const area = `M ${pts[0].x},${padding.top + plotH} ` + pts.map(pt => `L ${pt.x},${pt.y}`).join(' ') + ` L ${pts[pts.length-1].x},${padding.top + plotH} Z`;
+    const yBaseline = padding.top + plotH - ((prevNum - minVal) / valRange) * plotH;
+    const currX = padding.left + ((currentCycle - 1) / (maxCycle - 1)) * plotW;
+    const currY = padding.top + plotH - ((currNum - minVal) / valRange) * plotH;
+
+    return (
+      <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} style={{ overflow: 'visible' }}>
+        <defs>
+          <linearGradient id="sensorAreaGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.0" />
+          </linearGradient>
+        </defs>
+
+        {/* Grid lines */}
+        <line x1={padding.left} y1={padding.top} x2={width - padding.right} y2={padding.top} stroke="#1e293b" />
+        <line x1={padding.left} y1={padding.top + plotH / 2} x2={width - padding.right} y2={padding.top + plotH / 2} stroke="#1e293b" strokeDasharray="3 3" />
+        <line x1={padding.left} y1={padding.top + plotH} x2={width - padding.right} y2={padding.top + plotH} stroke="#1e293b" />
+
+        {/* Baseline Line */}
+        <line x1={padding.left} y1={yBaseline} x2={width - padding.right} y2={yBaseline} stroke="#22c55e" strokeDasharray="4 3" strokeWidth="1.2" />
+        <text x={width - padding.right + 4} y={yBaseline + 3} fill="#22c55e" fontSize="9" fontWeight="700">Nominal</text>
+
+        {/* Area fill under curve */}
+        <path d={area} fill="url(#sensorAreaGrad)" />
+
+        {/* Sensor Polyline */}
+        <polyline fill="none" stroke="#38bdf8" strokeWidth="2.5" points={poly} />
+
+        {/* Interactive Data Dots */}
+        {pts.map((pt, idx) => (
+          <circle
+            key={idx}
+            cx={pt.x}
+            cy={pt.y}
+            r={pt.p.isCurrent ? "5" : "2.5"}
+            fill={pt.p.isCurrent ? "#ef4444" : (pt.p.isPastOrCurrent ? "#38bdf8" : "#475569")}
+            stroke="#090d16"
+            strokeWidth="1.5"
+            style={{ cursor: 'pointer' }}
+            onMouseEnter={() => setHoveredPoint(pt.p)}
+            onMouseLeave={() => setHoveredPoint(null)}
+          />
+        ))}
+
+        {/* Live Cycle Indicator Line */}
+        <line x1={currX} y1={padding.top} x2={currX} y2={padding.top + plotH} stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="3 2" />
+        <circle cx={currX} cy={currY} r="6" fill="#f59e0b" stroke="#ffffff" strokeWidth="2" />
+
+        {/* X Axis Labels */}
+        <text x={padding.left} y={height - 6} fill="#64748b" fontSize="10">Cycle 1</text>
+        <text x={width / 2} y={height - 6} fill="#64748b" fontSize="10" textAnchor="middle">Cycle {Math.round(maxCycle / 2)}</text>
+        <text x={width - padding.right} y={height - 6} fill="#64748b" fontSize="10" textAnchor="end">Cycle {maxCycle}</text>
+
+        {/* Y Axis Labels */}
+        <text x={padding.left - 6} y={padding.top + 10} fill="#94a3b8" fontSize="9" textAnchor="end" className="mono">{maxVal.toFixed(1)}</text>
+        <text x={padding.left - 6} y={padding.top + plotH} fill="#94a3b8" fontSize="9" textAnchor="end" className="mono">{minVal.toFixed(1)}</text>
+      </svg>
+    );
   };
 
   return (
@@ -427,6 +635,197 @@ export default function DashboardView({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/* 3.5. INTERACTIVE PROGNOSTIC GRAPH & TRAJECTORY EXPLORER         */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      <div className="card" style={{
+        marginBottom: '20px',
+        padding: '18px 20px',
+        background: '#ffffff',
+        border: '1px solid #e2e8f0',
+        borderRadius: '12px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+      }}>
+        {/* Graph Header with Mode Toggles */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <LineChart size={18} color="#2563eb" />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>
+                Prognostic Telemetry & Degradation Trajectory Graph
+              </h3>
+              <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>
+                Unit #{String(unitNum).padStart(3, '0')} real-time sensor curves, baseline envelope, and RUL forecast
+              </p>
+            </div>
+          </div>
+
+          {/* Graph View Mode Buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#f1f5f9', padding: '3px', borderRadius: '8px' }}>
+            <button
+              onClick={() => setGraphMode('sensor_trajectory')}
+              style={{
+                padding: '5px 12px',
+                fontSize: '11px',
+                fontWeight: 700,
+                borderRadius: '6px',
+                border: 'none',
+                cursor: 'pointer',
+                background: graphMode === 'sensor_trajectory' ? '#ffffff' : 'transparent',
+                color: graphMode === 'sensor_trajectory' ? '#0f172a' : '#64748b',
+                boxShadow: graphMode === 'sensor_trajectory' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+              }}
+            >
+              📈 Sensor Trajectory
+            </button>
+            <button
+              onClick={() => setGraphMode('rul_curve')}
+              style={{
+                padding: '5px 12px',
+                fontSize: '11px',
+                fontWeight: 700,
+                borderRadius: '6px',
+                border: 'none',
+                cursor: 'pointer',
+                background: graphMode === 'rul_curve' ? '#ffffff' : 'transparent',
+                color: graphMode === 'rul_curve' ? '#0f172a' : '#64748b',
+                boxShadow: graphMode === 'rul_curve' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
+              }}
+            >
+              📉 RUL & Health Degradation
+            </button>
+            <button
+              onClick={() => setIsGraphExpanded(!isGraphExpanded)}
+              style={{
+                padding: '5px 8px',
+                fontSize: '11px',
+                fontWeight: 600,
+                borderRadius: '6px',
+                border: 'none',
+                cursor: 'pointer',
+                background: 'transparent',
+                color: '#64748b'
+              }}
+              title={isGraphExpanded ? 'Collapse Graph' : 'Expand Graph'}
+            >
+              {isGraphExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+          </div>
+        </div>
+
+        {isGraphExpanded && (
+          <div>
+            {/* Sensor Selector Pills for Mode 1 */}
+            {graphMode === 'sensor_trajectory' && (
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                {telemetryDetails.baseline.map((sensor, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedSensorIndex(idx)}
+                    style={{
+                      padding: '5px 12px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      borderRadius: '20px',
+                      border: selectedSensorIndex === idx ? '1.5px solid #2563eb' : '1px solid #e2e8f0',
+                      background: selectedSensorIndex === idx ? '#eff6ff' : '#f8fafc',
+                      color: selectedSensorIndex === idx ? '#1d4ed8' : '#475569',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: selectedSensorIndex === idx ? '#2563eb' : '#94a3b8' }} />
+                    {sensor.name}
+                    <span className="mono" style={{ fontSize: '10px', color: '#64748b' }}>({sensor.curr})</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* SVG Chart Display */}
+            <div style={{ position: 'relative', background: '#090d16', borderRadius: '10px', padding: '12px 14px', border: '1px solid #1e293b' }}>
+              
+              {/* Top Legend Strip */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', fontSize: '11px' }}>
+                <div style={{ display: 'flex', gap: '14px', alignItems: 'center', color: '#94a3b8', flexWrap: 'wrap' }}>
+                  {graphMode === 'sensor_trajectory' && (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ width: '10px', height: '3px', background: '#38bdf8', borderRadius: '2px' }} />
+                        <span>Observed Sensor Curve</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ width: '10px', height: '1px', background: '#22c55e', borderTop: '1px dashed #22c55e' }} />
+                        <span>Baseline Nominal ({graphData.activeSensor.prev})</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ width: '10px', height: '1px', background: '#ef4444', borderTop: '1px dashed #ef4444' }} />
+                        <span>Critical Threshold</span>
+                      </div>
+                    </>
+                  )}
+                  {graphMode === 'rul_curve' && (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ width: '10px', height: '3px', background: '#38bdf8', borderRadius: '2px' }} />
+                        <span>Remaining Useful Life (Cycles)</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ width: '10px', height: '3px', background: '#10b981', borderRadius: '2px' }} />
+                        <span>Health Index (%)</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ width: '10px', height: '1px', background: '#ef4444', borderTop: '1px dashed #ef4444' }} />
+                        <span>Critical (30c)</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div style={{ color: '#cbd5e1', fontWeight: 600, fontSize: '11px' }}>
+                  Active Operational: <span style={{ color: '#38bdf8' }}>Cycle {currentCycle} / {maxCycle}</span>
+                </div>
+              </div>
+
+              {/* Chart SVG */}
+              {renderChartSvg()}
+            </div>
+
+            {/* Bottom Metrics Bar */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px', marginTop: '12px' }}>
+              <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Baseline Reference</div>
+                <div className="mono" style={{ fontSize: '14px', fontWeight: 700, color: '#16a34a', marginTop: '2px' }}>
+                  {graphData.activeSensor.prev}
+                </div>
+              </div>
+              <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Current Value (Cycle {currentCycle})</div>
+                <div className="mono" style={{ fontSize: '14px', fontWeight: 700, color: riskLevel === 'CRITICAL' ? '#dc2626' : (riskLevel === 'WARNING' ? '#d97706' : '#0f172a'), marginTop: '2px' }}>
+                  {graphData.activeSensor.curr}
+                </div>
+              </div>
+              <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Measured Drift</div>
+                <div className="mono" style={{ fontSize: '14px', fontWeight: 700, color: graphData.activeSensor.isElevated ? '#dc2626' : '#16a34a', marginTop: '2px' }}>
+                  {graphData.activeSensor.delta} ({graphData.activeSensor.dir})
+                </div>
+              </div>
+              <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Primary Subsystem</div>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {graphData.activeSensor.subsystem || 'Core Engine'}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════ */}
