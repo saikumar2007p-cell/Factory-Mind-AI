@@ -19,7 +19,6 @@ from backend.app.services.drift_detector import DriftDetectorService
 router = APIRouter(prefix="/drift", tags=["Behavioral Change Detection"])
 
 require_operator = require_role(["admin", "operator"])
-require_viewer = require_role(["admin", "operator", "viewer"])
 
 
 class RecordInvestigationRequest(BaseModel):
@@ -36,7 +35,7 @@ class RecordInvestigationRequest(BaseModel):
 async def get_behavioral_changes(
     machine_id: int,
     investigation_status: Optional[str] = Query(default=None, description="Filter: PENDING|INVESTIGATED|CLOSED"),
-    user: AuthUser = Depends(require_viewer),
+    user: AuthUser = Depends(require_operator),
     db: AsyncSession = Depends(get_db)
 ):
     """Returns behavioral changes detected for a specific machine."""
@@ -59,7 +58,7 @@ async def get_fleet_pending_changes(
 @router.get("/{change_id}", response_model=dict)
 async def get_behavioral_change(
     change_id: int,
-    user: AuthUser = Depends(require_viewer),
+    user: AuthUser = Depends(require_operator),
     db: AsyncSession = Depends(get_db)
 ):
     """Returns a specific behavioral change record."""

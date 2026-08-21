@@ -31,8 +31,6 @@ logger = logging.getLogger("factorymind.security")
 class UserRole(str, Enum):
     ADMIN = "ADMIN"
     OPERATOR = "OPERATOR"
-    ENGINEER = "ENGINEER"
-    VIEWER = "VIEWER"
 
 
 class AuthUser(BaseModel):
@@ -185,24 +183,19 @@ def _verify_firebase_token(token: str) -> Optional[Dict[str, Any]]:
 
 def _role_from_claims(claims: Dict[str, Any]) -> UserRole:
     """Extract UserRole from Firebase custom claims."""
-    raw_role = (claims.get("role") or "VIEWER").strip().upper()
+    raw_role = (claims.get("role") or "OPERATOR").strip().upper()
     if raw_role in ["ADMIN", "ROOT", "SYSTEM_ADMIN"]:
         return UserRole.ADMIN
     elif raw_role in ["OPERATOR", "ENGINEER", "SUPERVISOR", "TECHNICIAN"]:
         return UserRole.OPERATOR
-    elif raw_role in ["VIEWER", "READONLY", "AUDITOR"]:
-        return UserRole.VIEWER
-    return UserRole.VIEWER
+    return UserRole.OPERATOR
 
 
 def _permissions_for_role(role: UserRole) -> List[str]:
     """Return permissions list for a given role."""
     if role == UserRole.ADMIN:
         return ["read", "write", "manage_work_orders", "verify", "admin_config", "view_security_logs"]
-    elif role in [UserRole.OPERATOR, UserRole.ENGINEER]:
-        return ["read", "write", "manage_work_orders", "verify"]
-    else:
-        return ["read"]
+    return ["read", "write", "manage_work_orders", "verify"]
 
 
 # ============================================================================
@@ -272,11 +265,8 @@ def get_current_user(
     elif normalized_role in ["OPERATOR", "ENGINEER", "SUPERVISOR", "TECHNICIAN"]:
         role = UserRole.OPERATOR
         permissions = ["read", "write", "manage_work_orders", "verify"]
-    elif normalized_role in ["VIEWER", "READONLY", "AUDITOR"]:
-        role = UserRole.VIEWER
-        permissions = ["read"]
     else:
-        # Invalid role provided
+        # Invalid role provided (VIEWER is removed and rejected)
         client_ip = request.client.host if request.client else "unknown"
         SecurityAuditLogger.record(
             actor=x_actor_name or "Anonymous",
@@ -290,7 +280,7 @@ def get_current_user(
         )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid authentication role: '{raw_role}'. Supported roles: ADMIN, OPERATOR, VIEWER."
+            detail=f"Invalid authentication role: '{raw_role}'. Supported roles: ADMIN, OPERATOR."
         )
 
     actor_name = x_actor_name.strip() if x_actor_name and x_actor_name.strip() else f"User ({role.value})"

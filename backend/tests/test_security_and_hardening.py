@@ -78,7 +78,7 @@ async def test_unauthenticated_or_invalid_role_rejected(async_client):
 
 
 # ============================================================================
-# 2. Direct API Protection: Viewer Cannot Create Work Order
+# 2. Direct API Protection: Invalid/Purged Viewer Role Rejected
 # ============================================================================
 @pytest.mark.asyncio
 async def test_viewer_cannot_create_work_order_direct_api(async_client):
@@ -93,12 +93,11 @@ async def test_viewer_cannot_create_work_order_direct_api(async_client):
         json=payload,
         headers={"X-User-Role": "VIEWER", "X-Actor-Name": "Viewer Hacker"}
     )
-    assert resp.status_code == 403
-    assert "permission denied" in resp.json()["detail"].lower()
+    assert resp.status_code in (401, 403)
 
 
 # ============================================================================
-# 3. Direct API Protection: Viewer Cannot Assign Work Order
+# 3. Direct API Protection: Invalid/Purged Viewer Role Cannot Assign
 # ============================================================================
 @pytest.mark.asyncio
 async def test_viewer_cannot_assign_work_order_direct_api(db_session, async_client):
@@ -119,12 +118,11 @@ async def test_viewer_cannot_assign_work_order_direct_api(db_session, async_clie
         json={"assigned_to": "Unauthorized Tech"},
         headers={"X-User-Role": "VIEWER"}
     )
-    assert resp.status_code == 403
-    assert "permission denied" in resp.json()["detail"].lower()
+    assert resp.status_code in (401, 403)
 
 
 # ============================================================================
-# 4. Direct API Protection: Viewer Cannot Start Execution
+# 4. Direct API Protection: Invalid/Purged Viewer Role Cannot Start Execution
 # ============================================================================
 @pytest.mark.asyncio
 async def test_viewer_cannot_start_work_order_direct_api(db_session, async_client):
@@ -145,11 +143,11 @@ async def test_viewer_cannot_start_work_order_direct_api(db_session, async_clien
         f"/api/v1/work-orders/{wo.id}/start",
         headers={"X-User-Role": "VIEWER"}
     )
-    assert resp.status_code == 403
+    assert resp.status_code in (401, 403)
 
 
 # ============================================================================
-# 5. Direct API Protection: Viewer Cannot Complete Work Order
+# 5. Direct API Protection: Invalid/Purged Viewer Role Cannot Complete
 # ============================================================================
 @pytest.mark.asyncio
 async def test_viewer_cannot_complete_work_order_direct_api(db_session, async_client):
@@ -171,11 +169,11 @@ async def test_viewer_cannot_complete_work_order_direct_api(db_session, async_cl
         f"/api/v1/work-orders/{wo.id}/complete",
         headers={"X-User-Role": "VIEWER"}
     )
-    assert resp.status_code == 403
+    assert resp.status_code in (401, 403)
 
 
 # ============================================================================
-# 6. Direct API Protection: Viewer Cannot Verify Work Order
+# 6. Direct API Protection: Invalid/Purged Viewer Role Cannot Verify
 # ============================================================================
 @pytest.mark.asyncio
 async def test_viewer_cannot_verify_work_order_direct_api(db_session, async_client):
@@ -199,11 +197,11 @@ async def test_viewer_cannot_verify_work_order_direct_api(db_session, async_clie
         json={"verification_status": "RESOLVED", "verification_notes": "Fake signoff"},
         headers={"X-User-Role": "VIEWER"}
     )
-    assert resp.status_code == 403
+    assert resp.status_code in (401, 403)
 
 
 # ============================================================================
-# 7. Direct API Protection: Viewer Cannot Switch Active Data Source
+# 7. Direct API Protection: Invalid/Purged Viewer Role Cannot Switch Data Source
 # ============================================================================
 @pytest.mark.asyncio
 async def test_viewer_cannot_switch_active_data_source(async_client):
@@ -211,11 +209,11 @@ async def test_viewer_cannot_switch_active_data_source(async_client):
         "/api/v1/sources/set-active/csv_file_import",
         headers={"X-User-Role": "VIEWER"}
     )
-    assert resp.status_code == 403
+    assert resp.status_code in (401, 403)
 
 
 # ============================================================================
-# 8. Direct API Protection: Viewer Cannot Configure Data Source
+# 8. Direct API Protection: Invalid/Purged Viewer Role Cannot Configure Data Source
 # ============================================================================
 @pytest.mark.asyncio
 async def test_viewer_cannot_configure_data_source(async_client):
@@ -232,11 +230,11 @@ async def test_viewer_cannot_configure_data_source(async_client):
         json=payload,
         headers={"X-User-Role": "VIEWER"}
     )
-    assert resp.status_code == 403
+    assert resp.status_code in (401, 403)
 
 
 # ============================================================================
-# 9. Direct API Protection: Viewer Cannot Acknowledge Alert
+# 9. Direct API Protection: Invalid/Purged Viewer Role Cannot Acknowledge Alert
 # ============================================================================
 @pytest.mark.asyncio
 async def test_viewer_cannot_acknowledge_alert(db_session, async_client):
@@ -258,11 +256,11 @@ async def test_viewer_cannot_acknowledge_alert(db_session, async_client):
         f"/api/v1/alerts/{alert.id}/acknowledge",
         headers={"X-User-Role": "VIEWER"}
     )
-    assert resp.status_code == 403
+    assert resp.status_code in (401, 403)
 
 
 # ============================================================================
-# 10. Direct API Protection: Viewer Cannot Control Simulation
+# 10. Direct API Protection: Invalid/Purged Viewer Role Cannot Control Simulation
 # ============================================================================
 @pytest.mark.asyncio
 async def test_viewer_cannot_control_simulation(async_client):
@@ -271,7 +269,7 @@ async def test_viewer_cannot_control_simulation(async_client):
         json={"unit_number": 1},
         headers={"X-User-Role": "VIEWER"}
     )
-    assert resp.status_code == 403
+    assert resp.status_code in (401, 403)
 
 
 # ============================================================================
@@ -549,11 +547,11 @@ async def test_auth_roles_endpoint_metadata(async_client):
     resp = await async_client.get("/api/v1/auth/roles")
     assert resp.status_code == 200
     roles = resp.json()
-    assert len(roles) >= 3
+    assert len(roles) == 2
     role_names = [r["role"] for r in roles]
     assert "ADMIN" in role_names
     assert "OPERATOR" in role_names
-    assert "VIEWER" in role_names
+    assert "VIEWER" not in role_names
 
 
 # ============================================================================

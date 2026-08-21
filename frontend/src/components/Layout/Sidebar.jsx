@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   LayoutDashboard,
   Cpu,
@@ -13,7 +12,12 @@ import {
   TrendingUp,
   ChevronLeft,
   ChevronRight,
-  LogOut
+  LogOut,
+  Users,
+  Database,
+  Sliders,
+  Sparkles,
+  Server
 } from 'lucide-react';
 
 export default function Sidebar({ 
@@ -25,20 +29,32 @@ export default function Sidebar({
   onLogout,
   userRole = 'ADMIN'
 }) {
-  const allNavItems = [
+  // ADMIN Navigation: System + Factory + Investigation + Governance
+  const adminNavItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'insights', label: 'Investigations', icon: BrainCircuit },
+    { id: 'production', label: 'Factories & Production', icon: Activity },
+    { id: 'machines', label: 'Machines & Subsystems', icon: Cpu, badge: fleetSummary?.total_machines || 100 },
     { id: 'fleet', label: 'Fleet Intelligence', icon: Layers },
+    { id: 'alerts', label: 'Active Alarms', icon: AlertTriangle, badge: fleetSummary?.warning_count || 0, badgeType: 'warning' },
+    { id: 'maintenance', label: 'Maintenance Orders', icon: Wrench },
     { id: 'learning', label: 'Learning Intelligence', icon: TrendingUp },
-    { id: 'machines', label: 'Machines', icon: Cpu, badge: fleetSummary?.total_machines || 100 },
-    { id: 'alerts', label: 'Alerts', icon: AlertTriangle, badge: fleetSummary?.warning_count || 0, badgeType: 'warning' },
-    { id: 'insights', label: 'AI Insights', icon: BrainCircuit },
-    { id: 'maintenance', label: 'Maintenance', icon: Wrench },
-    { id: 'production', label: 'Production', icon: Activity },
-    { id: 'documents', label: 'Documents', icon: FileText },
-    { id: 'settings', label: 'Settings', icon: Settings, adminOnly: true },
+    { id: 'documents', label: 'Documents & Specs', icon: FileText },
+    { id: 'settings', label: 'System Settings', icon: Settings },
   ];
 
-  const navItems = allNavItems.filter(item => !item.adminOnly || userRole === 'ADMIN');
+  // OPERATOR Navigation: Machine + Change + Issue + Action
+  const operatorNavItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'machines', label: 'My Machines', icon: Cpu, badge: fleetSummary?.total_machines || 100 },
+    { id: 'alerts', label: 'Active Issues', icon: AlertTriangle, badge: fleetSummary?.warning_count || 0, badgeType: 'warning' },
+    { id: 'insights', label: 'Investigations', icon: BrainCircuit },
+    { id: 'maintenance', label: 'Actions / Maintenance', icon: Wrench },
+    { id: 'learning', label: 'Reports & Outcomes', icon: TrendingUp },
+    { id: 'documents', label: 'Operating Manuals', icon: FileText },
+  ];
+
+  const navItems = userRole === 'ADMIN' ? adminNavItems : operatorNavItems;
 
   return (
     <aside className={`app-sidebar ${isCollapsed ? 'collapsed' : ''}`}>

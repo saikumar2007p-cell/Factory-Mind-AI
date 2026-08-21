@@ -30,7 +30,7 @@ class User(Base):
     password_hash = Column(String(255), nullable=True)
 
     # --- Role ---
-    # ADMIN | OPERATOR | ENGINEER | VIEWER
+    # ADMIN | OPERATOR
     role = Column(String(20), nullable=False, default="OPERATOR")
 
     # --- Status ---

@@ -89,7 +89,7 @@ export async function getCurrentUserRole() {
   }
   try {
     const tokenResult = await auth.currentUser.getIdTokenResult();
-    return tokenResult.claims.role || 'VIEWER';
+    return tokenResult.claims.role || 'OPERATOR';
   } catch (err) {
     console.error('[Firebase Auth] Failed to get role from claims:', err);
     return null;

@@ -18,7 +18,6 @@ from backend.app.services.outcome_service import OutcomeService
 router = APIRouter(prefix="/outcomes", tags=["Maintenance Outcomes"])
 
 require_operator = require_role(["admin", "operator"])
-require_viewer = require_role(["admin", "operator", "viewer"])
 
 
 class RecordOutcomeRequest(BaseModel):
@@ -58,7 +57,7 @@ class UpdateOutcomeRequest(BaseModel):
 @router.get("", response_model=List[dict])
 async def list_outcomes(
     limit: int = Query(default=50, ge=1, le=500),
-    user: AuthUser = Depends(require_viewer),
+    user: AuthUser = Depends(require_operator),
     db: AsyncSession = Depends(get_db)
 ):
     """Returns recorded maintenance outcomes, newest first."""
@@ -70,7 +69,7 @@ async def list_outcomes(
 @router.get("/machine/{machine_id}", response_model=List[dict])
 async def list_machine_outcomes(
     machine_id: int,
-    user: AuthUser = Depends(require_viewer),
+    user: AuthUser = Depends(require_operator),
     db: AsyncSession = Depends(get_db)
 ):
     """Returns all outcomes for a specific machine."""
@@ -81,7 +80,7 @@ async def list_machine_outcomes(
 
 @router.get("/performance", response_model=Dict[str, Any])
 async def get_model_performance(
-    user: AuthUser = Depends(require_viewer),
+    user: AuthUser = Depends(require_operator),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -106,7 +105,7 @@ async def get_retraining_candidates(
 @router.get("/work-order/{work_order_id}", response_model=Optional[dict])
 async def get_outcome_by_work_order(
     work_order_id: int,
-    user: AuthUser = Depends(require_viewer),
+    user: AuthUser = Depends(require_operator),
     db: AsyncSession = Depends(get_db)
 ):
     """Returns the outcome recorded for a specific work order, if any."""

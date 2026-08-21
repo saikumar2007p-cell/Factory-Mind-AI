@@ -207,7 +207,7 @@ async def test_role_matrix_security_invariants(async_client):
             resp = await async_client.post(path, json=payload, headers={"X-User-Role": "VIEWER"})
         else:
             resp = await async_client.get(path, headers={"X-User-Role": "VIEWER"})
-        assert resp.status_code == 403, f"Viewer unexpectedly allowed on {path} (got {resp.status_code})"
+        assert resp.status_code in (401, 403), f"Viewer unexpectedly allowed on {path} (got {resp.status_code})"
 
     # B. Operator cannot access admin configurations or security logs
     resp_admin_cfg = await async_client.post(

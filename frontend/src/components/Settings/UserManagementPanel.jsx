@@ -188,17 +188,11 @@ export default function UserManagementPanel({ userRole = 'ADMIN' }) {
                       className={`text-xs font-semibold px-2.5 py-1 rounded border bg-gray-900 focus:outline-none ${
                         u.role === 'ADMIN'
                           ? 'border-purple-500/40 text-purple-300'
-                          : u.role === 'OPERATOR'
-                          ? 'border-blue-500/40 text-blue-300'
-                          : u.role === 'ENGINEER'
-                          ? 'border-emerald-500/40 text-emerald-300'
-                          : 'border-gray-700 text-gray-400'
+                          : 'border-blue-500/40 text-blue-300'
                       }`}
                     >
                       <option value="ADMIN">ADMIN</option>
                       <option value="OPERATOR">OPERATOR</option>
-                      <option value="ENGINEER">ENGINEER</option>
-                      <option value="VIEWER">VIEWER</option>
                     </select>
                   </td>
                   <td className="py-3 px-4">
@@ -279,10 +273,8 @@ export default function UserManagementPanel({ userRole = 'ADMIN' }) {
                   onChange={(e) => setRole(e.target.value)}
                   className="w-full bg-gray-950 border border-gray-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500"
                 >
-                  <option value="OPERATOR">OPERATOR (Full Operations & Work Orders)</option>
-                  <option value="ADMIN">ADMIN (Full System & Source Governance)</option>
-                  <option value="ENGINEER">ENGINEER (Analytics & Diagnostics)</option>
-                  <option value="VIEWER">VIEWER (Read-Only Telemetry & Dashboards)</option>
+                  <option value="OPERATOR">OPERATOR (Monitoring, Investigations & Work Orders)</option>
+                  <option value="ADMIN">ADMIN (Full System Configuration & Governance)</option>
                 </select>
               </div>
 

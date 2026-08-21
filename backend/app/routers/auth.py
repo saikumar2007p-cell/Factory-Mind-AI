@@ -51,7 +51,7 @@ class RegisterRequest(BaseModel):
     email: str = Field(min_length=3, max_length=255, description="User email address")
     password: str = Field(min_length=6, max_length=128, description="User password")
     display_name: Optional[str] = Field(default=None, max_length=200)
-    role: Optional[str] = Field(default="ADMIN", description="ADMIN | OPERATOR | VIEWER")
+    role: Optional[str] = Field(default="ADMIN", description="ADMIN | OPERATOR")
 
 
 class LoginRequest(BaseModel):
@@ -71,7 +71,7 @@ class AuthResponse(BaseModel):
 
 
 class RoleSwitchRequest(BaseModel):
-    role: str = Field(description="Desired role: ADMIN, OPERATOR, VIEWER")
+    role: str = Field(description="Desired role: ADMIN, OPERATOR")
     actor_name: Optional[str] = Field(default=None, max_length=100)
 
 
@@ -259,20 +259,14 @@ async def list_roles():
         RoleInfo(
             role=UserRole.ADMIN.value,
             display_name="System Administrator",
-            description="Full authorized access across all operations, data source configurations, work orders, and security audit logs.",
+            description="Full authorized access across all operations, data source configurations, work orders, system settings, user management, and security audit logs.",
             permissions=["read", "write", "manage_work_orders", "verify", "admin_config", "view_security_logs"]
         ),
         RoleInfo(
             role=UserRole.OPERATOR.value,
             display_name="Operations Engineer",
-            description="Full operational authority to create, assign, execute, and verify closed-loop maintenance work orders and acknowledge alerts.",
+            description="Full operational authority to investigate machine changes, create, assign, execute, and verify maintenance work orders, and acknowledge alerts.",
             permissions=["read", "write", "manage_work_orders", "verify"]
-        ),
-        RoleInfo(
-            role=UserRole.VIEWER.value,
-            display_name="Read-Only Viewer",
-            description="Strictly read-only visibility into fleet telemetry, diagnostics, predictions, alarms, maintenance histories, and learning analytics.",
-            permissions=["read"]
         )
     ]
 
@@ -317,7 +311,7 @@ async def switch_role(
         )
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Invalid role '{payload.role}'. Supported roles: ADMIN, OPERATOR, VIEWER."
+            detail=f"Invalid role '{payload.role}'. Supported roles: ADMIN, OPERATOR."
         )
 
     target_role = UserRole(raw_role)
@@ -325,10 +319,8 @@ async def switch_role(
 
     if target_role == UserRole.ADMIN:
         permissions = ["read", "write", "manage_work_orders", "verify", "admin_config", "view_security_logs"]
-    elif target_role == UserRole.OPERATOR or target_role == UserRole.ENGINEER:
-        permissions = ["read", "write", "manage_work_orders", "verify"]
     else:
-        permissions = ["read"]
+        permissions = ["read", "write", "manage_work_orders", "verify"]
 
     SecurityAuditLogger.record(
         actor=actor_name,

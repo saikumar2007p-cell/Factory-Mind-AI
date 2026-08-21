@@ -374,9 +374,8 @@ export default function LoginPage({ onLogin }) {
                 value={selectedRole}
                 onChange={e => setSelectedRole(e.target.value)}
               >
-                <option value="ADMIN">👑 System Administrator (Full Access)</option>
-                <option value="OPERATOR">🔧 Operations Engineer (Maintenance & Work Orders)</option>
-                <option value="VIEWER">👁️ Auditor / Viewer (Read-Only)</option>
+                <option value="ADMIN">👑 System Administrator (Full Access & Configuration)</option>
+                <option value="OPERATOR">🔧 Operations Engineer (Monitoring & Maintenance Actions)</option>
               </select>
             </div>
 
@@ -478,13 +477,6 @@ export default function LoginPage({ onLogin }) {
               style={{ ...styles.presetBtn, borderColor: '#93c5fd', background: '#eff6ff', color: '#2563eb' }}
             >
               <Wrench size={14} /> 🔧 Operator
-            </button>
-            <button
-              type="button"
-              onClick={() => handleInstantPreset('VIEWER', 'Read-Only Auditor')}
-              style={{ ...styles.presetBtn, borderColor: '#cbd5e1', background: '#f8fafc', color: '#475569' }}
-            >
-              <Eye size={14} /> 👁️ Viewer
             </button>
           </div>
         </div>

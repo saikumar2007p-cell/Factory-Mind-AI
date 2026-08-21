@@ -63,7 +63,7 @@ export default function App() {
       const unsubscribe = onAuthStateChanged(async (firebaseUser) => {
         if (firebaseUser) {
           try {
-            const role = await getCurrentUserRole() || 'VIEWER';
+            const role = await getCurrentUserRole() || 'OPERATOR';
             const displayName = firebaseUser.displayName || firebaseUser.email;
             setUserSession(role, displayName);
             setUserSessionState(getUserSession());
@@ -375,8 +375,8 @@ export default function App() {
         {/* Role Session Access Banner */}
         {userRole !== 'ADMIN' && (
           <div style={{
-            background: userRole === 'OPERATOR' ? '#eff6ff' : '#fef2f2',
-            border: `1px solid ${userRole === 'OPERATOR' ? '#93c5fd' : '#fca5a5'}`,
+            background: '#eff6ff',
+            border: '1px solid #93c5fd',
             borderRadius: '8px',
             padding: '10px 16px',
             margin: '16px 32px 0 32px',
@@ -388,15 +388,13 @@ export default function App() {
             boxShadow: 'var(--shadow-sm)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '16px' }}>{userRole === 'OPERATOR' ? '🔧' : '🔒'}</span>
-              <span style={{ color: userRole === 'OPERATOR' ? '#1e40af' : '#991b1b', fontWeight: 600 }}>
-                <strong>{userRole === 'OPERATOR' ? 'OPERATOR SESSION (Execution Access)' : 'VIEWER SESSION (Strictly Read-Only)'}:</strong>{' '}
-                {userRole === 'OPERATOR'
-                  ? 'You can create, assign, start, complete, and verify work orders. Platform data connectors and security audit logs are restricted to Admin.'
-                  : 'Read-Only Mode Active. All state mutations, work order creations, and platform settings are disabled for Viewer role.'}
+              <span style={{ fontSize: '16px' }}>🔧</span>
+              <span style={{ color: '#1e40af', fontWeight: 600 }}>
+                <strong>OPERATOR SESSION (Monitoring & Maintenance Execution):</strong>{' '}
+                You can investigate machines, review change detections, record responses, and execute/verify work orders. System administration is restricted to Admin.
               </span>
             </div>
-            <span className={`badge ${userRole === 'OPERATOR' ? 'badge-ai' : 'badge-critical'}`}>
+            <span className="badge badge-ai">
               ROLE: {userRole}
             </span>
           </div>

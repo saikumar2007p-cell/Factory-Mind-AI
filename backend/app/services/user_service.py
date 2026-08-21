@@ -20,7 +20,7 @@ import logging
 
 logger = logging.getLogger("factorymind.user_service")
 
-VALID_ROLES = {"ADMIN", "OPERATOR", "ENGINEER", "VIEWER"}
+VALID_ROLES = {"ADMIN", "OPERATOR"}
 
 
 class UserService:

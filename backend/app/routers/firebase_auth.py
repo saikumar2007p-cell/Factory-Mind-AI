@@ -21,7 +21,7 @@ router = APIRouter(prefix="/firebase", tags=["Firebase Authentication"])
 
 class SetRoleRequest(BaseModel):
     uid: str = Field(description="Firebase UID of the target user")
-    role: str = Field(description="Role to assign: ADMIN, OPERATOR, or VIEWER")
+    role: str = Field(description="Role to assign: ADMIN or OPERATOR")
     organization_id: str = Field(description="Organization ID for tenant isolation")
 
 
@@ -60,7 +60,7 @@ async def set_user_role(
             detail="Firebase Admin SDK not initialized. Check FIREBASE_SERVICE_ACCOUNT_PATH.",
         )
 
-    valid_roles = ["ADMIN", "OPERATOR", "VIEWER"]
+    valid_roles = ["ADMIN", "OPERATOR"]
     normalized_role = payload.role.strip().upper()
     if normalized_role not in valid_roles:
         raise HTTPException(

@@ -19,19 +19,19 @@ from backend.app.services.user_service import UserService
 router = APIRouter(prefix="/users", tags=["User Management"])
 
 require_admin = require_role(["admin"])
-require_viewer = require_role(["admin", "operator", "viewer"])
+require_operator = require_role(["admin", "operator"])
 
 
 class CreateUserRequest(BaseModel):
     username: str = Field(min_length=2, max_length=100, description="Unique username")
     display_name: str = Field(min_length=2, max_length=200)
-    role: str = Field(description="ADMIN | OPERATOR | ENGINEER | VIEWER")
+    role: str = Field(description="ADMIN | OPERATOR")
     email: Optional[str] = Field(default=None, max_length=255)
     notes: Optional[str] = None
 
 
 class UpdateUserRoleRequest(BaseModel):
-    new_role: str = Field(description="ADMIN | OPERATOR | ENGINEER | VIEWER")
+    new_role: str = Field(description="ADMIN | OPERATOR")
     updated_by: Optional[str] = None
 
 

@@ -167,7 +167,7 @@ export default function BehavioralChangeFeed({ machineId = 1, userRole = 'OPERAT
                 </div>
 
                 <div>
-                  {ch.investigation_status === 'PENDING' && userRole !== 'VIEWER' && (
+                  {ch.investigation_status === 'PENDING' && (
                     <button
                       onClick={() => setInvestigateModalChange(ch)}
                       className="px-3.5 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-medium transition shadow flex items-center gap-1.5"

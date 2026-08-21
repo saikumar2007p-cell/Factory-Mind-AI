@@ -548,9 +548,9 @@ export default function TopNavbar({
         <button
           onClick={onOpenRoleModal}
           style={{
-            background: currentUserRole === 'ADMIN' ? '#fef2f2' : (currentUserRole === 'OPERATOR' ? '#eff6ff' : '#f8fafc'),
-            color: currentUserRole === 'ADMIN' ? '#991b1b' : (currentUserRole === 'OPERATOR' ? '#1e40af' : '#334155'),
-            border: `1px solid ${currentUserRole === 'ADMIN' ? '#fca5a5' : (currentUserRole === 'OPERATOR' ? '#93c5fd' : '#cbd5e1')}`,
+            background: currentUserRole === 'ADMIN' ? '#fef2f2' : '#eff6ff',
+            color: currentUserRole === 'ADMIN' ? '#991b1b' : '#1e40af',
+            border: `1px solid ${currentUserRole === 'ADMIN' ? '#fca5a5' : '#93c5fd'}`,
             borderRadius: '6px',
             padding: '5px 10px',
             fontSize: '11px',
@@ -561,10 +561,10 @@ export default function TopNavbar({
             alignItems: 'center',
             gap: '6px'
           }}
-          title="Click to authenticate session role (Admin vs Operator vs Viewer)"
+          title="Click to switch session role (Admin vs Operator)"
         >
           <span>
-            {currentUserRole === 'ADMIN' ? '👑 Admin — Full Access' : (currentUserRole === 'OPERATOR' ? '🔧 Operator — Operations' : '👁️ Viewer — Read Only')}
+            {currentUserRole === 'ADMIN' ? '👑 Admin — Full System Access' : '🔧 Operator — Machine Operations'}
           </span>
         </button>
 
@@ -575,7 +575,7 @@ export default function TopNavbar({
             width: '30px',
             height: '30px',
             borderRadius: '50%',
-            backgroundColor: currentUserRole === 'ADMIN' ? '#991b1b' : (currentUserRole === 'OPERATOR' ? '#1e40af' : '#334155'),
+            backgroundColor: currentUserRole === 'ADMIN' ? '#991b1b' : '#1e40af',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -585,7 +585,7 @@ export default function TopNavbar({
             cursor: 'pointer',
             boxShadow: 'var(--shadow-sm)'
           }}
-          title={`Click to authenticate role. Current User: ${currentUserActor || 'Authorized User'} (${currentUserRole || 'ADMIN'})`}
+          title={`Active Session: ${currentUserActor || 'Authorized User'} (${currentUserRole || 'ADMIN'})`}
         >
           <User size={15} />
         </div>

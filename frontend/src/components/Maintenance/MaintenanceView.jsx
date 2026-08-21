@@ -267,19 +267,13 @@ export default function MaintenanceView({ latestDiagnosis, onSelectMachine, mach
             Traceable execution from ML anomaly detection and Gemini root-cause diagnosis to assigned maintenance and verified resolution.
           </p>
         </div>
-        {userRole === 'VIEWER' ? (
-          <div style={{ padding: '8px 14px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', fontSize: '12px', color: 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span>👁️ Viewer Mode (Read-Only)</span>
-          </div>
-        ) : (
-          <button
-            className="btn btn-primary"
-            onClick={() => setIsCreateModalOpen(true)}
-          >
-            <Plus size={16} />
-            Create Work Order
-          </button>
-        )}
+        <button
+          className="btn btn-primary"
+          onClick={() => setIsCreateModalOpen(true)}
+        >
+          <Plus size={16} />
+          Create Work Order
+        </button>
       </div>
 
       {/* Summary Metrics Cards */}
@@ -495,14 +489,8 @@ export default function MaintenanceView({ latestDiagnosis, onSelectMachine, mach
             </div>
 
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              {userRole === 'VIEWER' && selectedOrder.status !== 'VERIFIED' && (
-                <div style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', fontSize: '11px', color: 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                  👁️ Read-Only Mode (Mutations Restricted)
-                </div>
-              )}
-
               {/* OPEN: ONLY show Assign Technician (NEVER show Start Execution) */}
-              {userRole !== 'VIEWER' && (selectedOrder.status === 'OPEN' || selectedOrder.status === 'RECOMMENDED') && (
+              {(selectedOrder.status === 'OPEN' || selectedOrder.status === 'RECOMMENDED') && (
                 <button
                   className="btn btn-primary btn-sm"
                   onClick={() => setIsAssignModalOpen(true)}
@@ -512,7 +500,7 @@ export default function MaintenanceView({ latestDiagnosis, onSelectMachine, mach
               )}
 
               {/* ASSIGNED: Show Start Execution & Reassign */}
-              {userRole !== 'VIEWER' && selectedOrder.status === 'ASSIGNED' && (
+              {selectedOrder.status === 'ASSIGNED' && (
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
                     className="btn btn-secondary btn-sm"
@@ -530,7 +518,7 @@ export default function MaintenanceView({ latestDiagnosis, onSelectMachine, mach
               )}
 
               {/* IN_PROGRESS: Show Mark Maintenance Completed */}
-              {userRole !== 'VIEWER' && selectedOrder.status === 'IN_PROGRESS' && (
+              {selectedOrder.status === 'IN_PROGRESS' && (
                 <button
                   className="btn btn-primary btn-sm"
                   onClick={() => handleComplete(selectedOrder.id)}
@@ -540,7 +528,7 @@ export default function MaintenanceView({ latestDiagnosis, onSelectMachine, mach
               )}
 
               {/* VERIFICATION_REQUIRED: Show Perform Verification Sign-Off */}
-              {userRole !== 'VIEWER' && (selectedOrder.status === 'VERIFICATION_REQUIRED' || selectedOrder.status === 'COMPLETED') && (
+              {(selectedOrder.status === 'VERIFICATION_REQUIRED' || selectedOrder.status === 'COMPLETED') && (
                 <button
                   className="btn btn-primary btn-sm"
                   onClick={() => setIsVerifyModalOpen(true)}
@@ -556,15 +544,13 @@ export default function MaintenanceView({ latestDiagnosis, onSelectMachine, mach
                   <span className="badge badge-normal" style={{ background: '#ecfdf5', color: '#065f46', borderColor: '#a7f3d0' }}>
                     <ShieldCheck size={14} /> Verification Complete ({selectedOrder.verification_status || 'RESOLVED'})
                   </span>
-                  {userRole !== 'VIEWER' && (
-                    <button
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => setIsOutcomeModalOpen(true)}
-                      style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                    >
-                      <Sparkles size={14} color="#6366f1" /> Record Ground-Truth Outcome
-                    </button>
-                  )}
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => setIsOutcomeModalOpen(true)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <Sparkles size={14} color="#6366f1" /> Record Ground-Truth Outcome
+                  </button>
                 </div>
               )}
             </div>

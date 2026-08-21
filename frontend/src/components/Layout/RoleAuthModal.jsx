@@ -16,7 +16,7 @@ export default function RoleAuthModal({ isOpen, onClose, currentRole, currentAct
   if (!isOpen) return null;
 
   const [selectedRole, setSelectedRole] = useState(currentRole || 'ADMIN');
-  const [actorName, setActorName] = useState(currentActor || (currentRole === 'ADMIN' ? 'Chief Operations Admin' : (currentRole === 'OPERATOR' ? 'Lead Maintenance Engineer' : 'Read-Only Auditor')));
+  const [actorName, setActorName] = useState(currentActor || (currentRole === 'ADMIN' ? 'Chief Operations Admin' : 'Lead Maintenance Engineer'));
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
@@ -24,8 +24,7 @@ export default function RoleAuthModal({ isOpen, onClose, currentRole, currentAct
   const handleRoleSelect = (role) => {
     setSelectedRole(role);
     if (role === 'ADMIN') setActorName('Chief Operations Admin');
-    else if (role === 'OPERATOR') setActorName('Lead Maintenance Engineer');
-    else setActorName('Read-Only Auditor');
+    else setActorName('Lead Maintenance Engineer');
   };
 
   const handleSubmit = async (e) => {
@@ -192,31 +191,7 @@ export default function RoleAuthModal({ isOpen, onClose, currentRole, currentAct
                 <span className="badge badge-ai" style={{ fontSize: '10px' }}>Maintenance Access</span>
               </div>
               <p style={{ margin: 0, fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
-                Authorized for maintenance work order operations (create, assign, start, complete, verify) and alarm acknowledgement. System settings restricted to Admin by backend.
-              </p>
-            </div>
-
-            {/* VIEWER CARD */}
-            <div
-              onClick={() => handleRoleSelect('VIEWER')}
-              style={{
-                padding: '14px 16px',
-                borderRadius: '8px',
-                border: `2px solid ${selectedRole === 'VIEWER' ? '#475569' : '#e2e8f0'}`,
-                background: selectedRole === 'VIEWER' ? '#f8fafc' : '#ffffff',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '18px' }}>👁️</span>
-                  <span style={{ fontSize: '14px', fontWeight: 700, color: '#334155' }}>VIEWER — Read Only</span>
-                </div>
-                <span className="badge badge-normal" style={{ fontSize: '10px' }}>Strict Read-Only</span>
-              </div>
-              <p style={{ margin: 0, fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
-                Read-only inspection of fleet telemetry, prognostics, alarms, and analytics. All state mutations and work order operations are disabled and rejected by backend HTTP 403 Forbidden.
+                Authorized for machine investigation, work order lifecycle operations (create, assign, start, complete, verify), and alarm acknowledgement. System administration and platform settings are restricted to Admin.
               </p>
             </div>
           </div>
