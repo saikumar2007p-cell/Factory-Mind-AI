@@ -142,5 +142,53 @@
     "gateway_response": "Exotel HTTP 400: {\"RestException\":{\"Status\":400,\"Message\":\"Encoding type is not properly set. Please check the encoding type again before",
     "click_url": "https://wa.me/916303736452?text=%F0%9F%9A%A8%20%2AFactoryMind%20AI%20%E2%80%94%20URGENT%20CRITICAL%20ALERT%2A%20%F0%9F%9A%A8%0A%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%0A%F0%9F%8F%AD%20%2AMachine%2A%3A%20Unit%20%23001%20%28Turbofan%20Engine%20%28CF6-80C2%29%29%0A%E2%9A%A0%EF%B8%8F%20%2ASeverity%2A%3A%20%2ACRITICAL%2A%0A%F0%9F%93%89%20%2AEstimated%20Life%20Left%2A%3A%2021.4%20cycles%0A%F0%9F%A9%BA%20%2ACurrent%20Machine%20Health%2A%3A%2048.6%25%0A%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%0A%F0%9F%94%8D%20%2ADiagnosed%20Cause%2A%3A%0AAUTOMATED%20DETECT%3A%20High%20thermal%20degradation%20observed%20across%20HPC%20stage%201%20and%20LPT%20turbine%20blades%20%28%2B38%C2%B0R%20drift%29%0A%0A%F0%9F%9B%A0%EF%B8%8F%20%2ARecommended%20Action%2A%3A%0AImmediate%20bore-scope%20inspection%20%26%20schedule%20thermal%20seal%20replacement%0A%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%0A%E2%8F%B1%EF%B8%8F%20%2ALogged%20At%2A%3A%202026-08-21%2011%3A31%3A46%20UTC%0A%F0%9F%94%97%20%2AOpen%20Live%20Dashboard%2A%3A%20http%3A//localhost%3A3000",
     "message_preview": "[FactoryMind AI ALERT] CRITICAL on Unit #001 (Turbofan Engine (CF6-80C2)). Life Left: 21.4c, Health: 48.6%. Cause: AUTOM..."
+  },
+  {
+    "timestamp": "2026-08-21T11:35:37.963427+00:00",
+    "machine_id": 1,
+    "severity": "CRITICAL",
+    "phone_number": "+91 6303736452",
+    "clean_phone": "916303736452",
+    "provider": "exotel",
+    "status": "EXOTEL_SMS_QUEUED",
+    "gateway_response": "Exotel HTTP 400: {\"RestException\":{\"Status\":400,\"Message\":\"Encoding type is not properly set. Please check the encoding type again before",
+    "click_url": "https://wa.me/916303736452?text=%F0%9F%9A%A8%20%2AFactoryMind%20AI%20%E2%80%94%20URGENT%20CRITICAL%20ALERT%2A%20%F0%9F%9A%A8%0A%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%0A%F0%9F%8F%AD%20%2AMachine%2A%3A%20Unit%20%23001%20%28Turbofan%20Engine%20%28CF6-80C2%29%29%0A%E2%9A%A0%EF%B8%8F%20%2ASeverity%2A%3A%20%2ACRITICAL%2A%0A%F0%9F%93%89%20%2AEstimated%20Life%20Left%2A%3A%2021.4%20cycles%0A%F0%9F%A9%BA%20%2ACurrent%20Machine%20Health%2A%3A%2048.6%25%0A%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%0A%F0%9F%94%8D%20%2ADiagnosed%20Cause%2A%3A%0AAUTOMATED%20DETECT%3A%20High%20thermal%20degradation%20observed%20across%20HPC%20stage%201%20and%20LPT%20turbine%20blades%20%28%2B38%C2%B0R%20drift%29%0A%0A%F0%9F%9B%A0%EF%B8%8F%20%2ARecommended%20Action%2A%3A%0AImmediate%20bore-scope%20inspection%20%26%20schedule%20thermal%20seal%20replacement%0A%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%0A%E2%8F%B1%EF%B8%8F%20%2ALogged%20At%2A%3A%202026-08-21%2011%3A35%3A37%20UTC%0A%F0%9F%94%97%20%2AOpen%20Live%20Dashboard%2A%3A%20http%3A//localhost%3A3000",
+    "message_preview": "[FactoryMind AI ALERT] CRITICAL on Unit #001 (Turbofan Engine (CF6-80C2)). Life Left: 21.4c, Health: 48.6%. Cause: AUTOM..."
+  },
+  {
+    "timestamp": "2026-08-21T11:36:22.156915+00:00",
+    "machine_id": 1,
+    "severity": "CRITICAL",
+    "phone_number": "+91 6303736452",
+    "clean_phone": "916303736452",
+    "provider": "exotel",
+    "status": "EXOTEL_SMS_QUEUED",
+    "gateway_response": "Exotel HTTP 400: {\"RestException\":{\"Status\":400,\"Message\":\"Encoding type is not properly set. Please check the encoding type again before",
+    "click_url": "https://wa.me/916303736452?text=%F0%9F%9A%A8%20%2AFactoryMind%20AI%20%E2%80%94%20URGENT%20CRITICAL%20ALERT%2A%20%F0%9F%9A%A8%0A%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%0A%F0%9F%8F%AD%20%2AMachine%2A%3A%20Unit%20%23001%20%28Industrial%20Turbofan%20Engine%29%0A%E2%9A%A0%EF%B8%8F%20%2ASeverity%2A%3A%20%2ACRITICAL%2A%0A%F0%9F%93%89%20%2AEstimated%20Life%20Left%2A%3A%2024.5%20cycles%0A%F0%9F%A9%BA%20%2ACurrent%20Machine%20Health%2A%3A%2054.0%25%0A%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%0A%F0%9F%94%8D%20%2ADiagnosed%20Cause%2A%3A%0AAutomated%20Alert%3A%20HPC%20temperature%20drift%20exceeds%20safe%20baseline%20limits%20by%20%2B34%C2%B0R%0A%0A%F0%9F%9B%A0%EF%B8%8F%20%2ARecommended%20Action%2A%3A%0AImmediate%20bore-scope%20inspection%20%26%20schedule%20HPC%20seal%20replacement%0A%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%0A%E2%8F%B1%EF%B8%8F%20%2ALogged%20At%2A%3A%202026-08-21%2011%3A36%3A22%20UTC%0A%F0%9F%94%97%20%2AOpen%20Live%20Dashboard%2A%3A%20http%3A//localhost%3A3000",
+    "message_preview": "[FactoryMind AI ALERT] CRITICAL on Unit #001 (Industrial Turbofan Engine). Life Left: 24.5c, Health: 54.0%. Cause: Autom..."
+  },
+  {
+    "timestamp": "2026-08-21T11:43:14.978406+00:00",
+    "machine_id": 5,
+    "severity": "CRITICAL",
+    "phone_number": "+91 6303736452",
+    "clean_phone": "916303736452",
+    "provider": "exotel",
+    "status": "EXOTEL_SMS_QUEUED",
+    "gateway_response": "Exotel HTTP 403: {\"RestException\":{\"Status\":403,\"Message\":\"Action forbidden on given resource; \",\"Code\":34009}}\n",
+    "click_url": "https://wa.me/916303736452?text=%F0%9F%9A%A8%20%2AFactoryMind%20AI%20%E2%80%94%20URGENT%20CRITICAL%20ALERT%2A%20%F0%9F%9A%A8%0A%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%0A%F0%9F%8F%AD%20%2AMachine%2A%3A%20Unit%20%23005%20%28Industrial%20Gearbox%29%0A%E2%9A%A0%EF%B8%8F%20%2ASeverity%2A%3A%20%2ACRITICAL%2A%0A%F0%9F%93%89%20%2AEstimated%20Life%20Left%2A%3A%2019.4%20cycles%0A%F0%9F%A9%BA%20%2ACurrent%20Machine%20Health%2A%3A%2048.0%25%0A%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%0A%F0%9F%94%8D%20%2ADiagnosed%20Cause%2A%3A%0AShaft%20vibration%20harmonic%20spike%20detected%0A%0A%F0%9F%9B%A0%EF%B8%8F%20%2ARecommended%20Action%2A%3A%0AGrease%20bearings%20and%20check%20gear%20teeth%20clearance%0A%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%0A%E2%8F%B1%EF%B8%8F%20%2ALogged%20At%2A%3A%202026-08-21%2011%3A43%3A14%20UTC%0A%F0%9F%94%97%20%2AOpen%20Live%20Dashboard%2A%3A%20http%3A//localhost%3A3000",
+    "message_preview": "[FactoryMind AI ALERT] CRITICAL on Unit #005 (Industrial Gearbox). Life Left: 19.4c, Health: 48.0%. Cause: Shaft vibrati..."
+  },
+  {
+    "timestamp": "2026-08-21T11:43:16.725586+00:00",
+    "machine_id": 0,
+    "severity": "TEST",
+    "phone_number": "+15550001122",
+    "clean_phone": "15550001122",
+    "provider": "exotel",
+    "status": "EXOTEL_SMS_SENT",
+    "gateway_response": "Exotel HTTP 403: {\"RestException\":{\"Status\":403,\"Message\":\"Action forbidden on given resource; \",\"Code\":34009}}\n",
+    "click_url": "https://wa.me/15550001122?text=%F0%9F%A4%96%20%2AFactoryMind%20AI%20%E2%80%94%20Automated%20Alert%20Bot%20Active%21%2A%20%F0%9F%A4%96%0A%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%0A%F0%9F%91%8B%20Hello%20Administrator%2C%0A%0AAutomated%20SMS%20%26%20WhatsApp%20messaging%20is%20configured%20for%20%2A%2B15550001122%2A%20via%20%2AExotel%20Gateway%2A.%0A%0A%F0%9F%9A%80%20%2AActive%20Automated%20Engines%2A%3A%0A%E2%80%A2%20%E2%9A%A1%20Exotel%20SMS%20Broadcasts%3A%20%2ACONNECTED%2A%0A%E2%80%A2%20%F0%9F%9A%A8%20Critical%20Machine%20Failure%20Alerts%3A%20%2AENABLED%2A%0A%E2%80%A2%20%F0%9F%A7%A0%20AI%20Root-Cause%20Diagnostic%20Reports%3A%20%2AENABLED%2A%0A%E2%80%A2%20%F0%9F%9B%A0%EF%B8%8F%20Prescriptive%20Step-by-Step%20Fixes%3A%20%2AENABLED%2A%0A%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%E2%94%81%0A%E2%8F%B1%EF%B8%8F%20%2AVerified%20At%2A%3A%202026-08-21%2011%3A43%3A15%20UTC%0A%F0%9F%94%97%20%2AFactory%20Dashboard%2A%3A%20http%3A//localhost%3A3000",
+    "message_preview": "[FactoryMind AI] Exotel SMS Alert Bot Connected! Real-time critical machine alerts will be delivered to +15550001122. Verified at 2026-08-21 11:43:15 UTC. http://localhost:3000"
   }
 ]

@@ -19,7 +19,8 @@ import {
   Info,
   Lock,
   Smartphone,
-  MessageSquare
+  MessageSquare,
+  Mail
 } from 'lucide-react';
 import {
   getDataSources,
@@ -37,6 +38,7 @@ import UserManagementPanel from './UserManagementPanel';
 import MachineRegistrationQueue from './MachineRegistrationQueue';
 import DatasetSelector from '../Datasets/DatasetSelector';
 import WhatsAppSettingsPanel from './WhatsAppSettingsPanel';
+import GmailSettingsPanel from './GmailSettingsPanel';
 
 export default function SettingsView({ userRole = 'ADMIN' }) {
   if (userRole !== 'ADMIN') {
@@ -286,7 +288,18 @@ export default function SettingsView({ userRole = 'ADMIN' }) {
             style={{ display: 'flex', alignItems: 'center', gap: '6px', background: activeTab === 'whatsapp' ? '#059669' : undefined, borderColor: activeTab === 'whatsapp' ? '#059669' : undefined }}
           >
             <Smartphone size={15} color={activeTab === 'whatsapp' ? '#ffffff' : '#10b981'} />
-            WhatsApp Alerts
+            WhatsApp & SMS Alerts
+          </button>
+        )}
+
+        {userRole === 'ADMIN' && (
+          <button
+            onClick={() => setActiveTab('gmail')}
+            className={`btn btn-sm ${activeTab === 'gmail' ? 'btn-primary' : 'btn-secondary'}`}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', background: activeTab === 'gmail' ? '#4f46e5' : undefined, borderColor: activeTab === 'gmail' ? '#4f46e5' : undefined }}
+          >
+            <Mail size={15} color={activeTab === 'gmail' ? '#ffffff' : '#6366f1'} />
+            Gmail & Email Alerts
           </button>
         )}
 
@@ -314,6 +327,12 @@ export default function SettingsView({ userRole = 'ADMIN' }) {
       {activeTab === 'whatsapp' && (
         <div style={{ marginBottom: '24px' }}>
           <WhatsAppSettingsPanel />
+        </div>
+      )}
+
+      {activeTab === 'gmail' && (
+        <div style={{ marginBottom: '24px' }}>
+          <GmailSettingsPanel />
         </div>
       )}
 

@@ -7,13 +7,36 @@ import {
   ArrowRight,
   ShieldCheck,
   Wrench,
-  MessageSquare
+  MessageSquare,
+  Mail
 } from 'lucide-react';
-import { createWorkOrder, sendWhatsAppAlert, openWhatsAppDirect } from '../../services/api';
+import { createWorkOrder, sendWhatsAppAlert, openWhatsAppDirect, sendEmailAlert } from '../../services/api';
 
 export default function AlertsView({ alerts, onAcknowledgeAlert, onSelectMachine, userRole = 'ADMIN', searchQuery }) {
   const [filter, setFilter] = useState('ALL'); // ALL, ACTIVE, ACKNOWLEDGED
   const [sendingWhatsAppId, setSendingWhatsAppId] = useState(null);
+  const [sendingEmailId, setSendingEmailId] = useState(null);
+
+  const handleSendEmail = async (a) => {
+    try {
+      setSendingEmailId(a.id);
+      const res = await sendEmailAlert({
+        machine_id: a.machine_id,
+        severity: a.severity || 'CRITICAL',
+        reason: a.reason || 'Degradation anomaly detected',
+        action: `Inspect Unit #${a.machine_id} and remediate root cause`,
+        rul: a.rul,
+        health: a.health
+      });
+      if (res && res.mailto_url) {
+        window.location.href = res.mailto_url;
+      }
+    } catch (err) {
+      alert('Error sending Email alert: ' + (err.message || 'Unknown error'));
+    } finally {
+      setSendingEmailId(null);
+    }
+  };
 
   const handleSendWhatsApp = async (a) => {
     try {
@@ -196,6 +219,26 @@ export default function AlertsView({ alerts, onAcknowledgeAlert, onSelectMachine
                             >
                               <MessageSquare size={12} />
                               {sendingWhatsAppId === a.id ? 'Sending...' : 'WhatsApp'}
+                            </button>
+
+                            <button
+                              className="btn btn-sm"
+                              style={{
+                                padding: '4px 8px',
+                                background: '#4f46e5',
+                                color: '#ffffff',
+                                border: 'none',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                fontWeight: 700
+                              }}
+                              title="Send Email Alert to Admin Gmail"
+                              disabled={sendingEmailId === a.id}
+                              onClick={() => handleSendEmail(a)}
+                            >
+                              <Mail size={12} />
+                              {sendingEmailId === a.id ? 'Sending...' : 'Gmail'}
                             </button>
                           </>
                         )}

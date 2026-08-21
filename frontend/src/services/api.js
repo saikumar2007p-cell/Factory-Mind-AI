@@ -568,4 +568,37 @@ export function openWhatsAppDirect(phone, message) {
   return url;
 }
 
+// ----------------------------------------------------------------------------
+// GMAIL & EMAIL ALERT NOTIFICATIONS
+// ----------------------------------------------------------------------------
+
+export const getEmailSettings = () => request('/notifications/email/settings');
+
+export const updateEmailSettings = (settingsData) =>
+  request('/notifications/email/settings', {
+    method: 'POST',
+    body: JSON.stringify(settingsData)
+  });
+
+export const sendEmailAlert = (alertData) =>
+  request('/notifications/email/send', {
+    method: 'POST',
+    body: JSON.stringify(alertData)
+  });
+
+export const testEmailAlert = (email) =>
+  request('/notifications/email/test', {
+    method: 'POST',
+    body: JSON.stringify(email ? { email } : {})
+  });
+
+export const getEmailLogs = () => request('/notifications/email/logs');
+
+export function openEmailDirect(email, subject, body) {
+  const mailto = `mailto:${email || 'admin@factorymind.ai'}?subject=${encodeURIComponent(subject || '🚨 FactoryMind AI Alert')}&body=${encodeURIComponent(body || '')}`;
+  window.location.href = mailto;
+  return mailto;
+}
+
+
 

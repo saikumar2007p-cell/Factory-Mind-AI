@@ -220,7 +220,27 @@ class SimulationEngine:
                                 )
                             )
                     except Exception as auto_err:
-                        logger.warning(f"Automated notification dispatch skipped: {auto_err}")
+                        logger.warning(f"Automated WhatsApp notification dispatch skipped: {auto_err}")
+
+                    # Trigger Automated Gmail / Email Dispatch
+                    try:
+                        from backend.app.services.email_service import EmailService
+                        em_service = EmailService()
+                        em_settings = em_service.get_settings()
+                        if em_settings.get("auto_send_enabled", True) and em_settings.get("email_enabled", True):
+                            asyncio.create_task(
+                                em_service.send_email_alert(
+                                    machine_id=machine_id,
+                                    machine_type=f"Turbofan CF6-80C2 Unit #{self.unit_number:03d}",
+                                    severity=alert.severity,
+                                    reason=alert.reason,
+                                    action="Inspect stage 1 HPC and replace turbine thermal seals",
+                                    rul=float(result.get("rul_estimate", 24.5)),
+                                    health=float(result.get("health_index", 52.4))
+                                )
+                            )
+                    except Exception as em_err:
+                        logger.warning(f"Automated Email notification dispatch skipped: {em_err}")
         except Exception as e:
             logger.error(f"Error persisting simulation cycle to database: {e}")
 

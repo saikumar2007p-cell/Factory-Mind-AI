@@ -1,0 +1,16 @@
+{
+  "admin_email": "admin@factorymind.ai",
+  "admin_name": "Factory Administrator",
+  "email_enabled": true,
+  "auto_send_enabled": true,
+  "notify_on_critical": true,
+  "notify_on_warning": true,
+  "smtp_host": "smtp.gmail.com",
+  "smtp_port": 587,
+  "smtp_user": "",
+  "smtp_password": "",
+  "sender_name": "FactoryMind AI Alert Bot",
+  "last_email_sent_at": "2026-08-21T11:43:14.835090+00:00",
+  "total_emails_dispatched": 1,
+  "updated_at": "2026-08-21T11:43:14.835548+00:00"
+}

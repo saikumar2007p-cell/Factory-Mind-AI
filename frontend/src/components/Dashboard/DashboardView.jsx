@@ -29,9 +29,10 @@ import {
   Gauge,
   LineChart,
   PieChart,
-  MessageSquare
+  MessageSquare,
+  Mail
 } from 'lucide-react';
-import { getWorkOrdersSummary, getFleetSummary, getLearningOverview, getCached, sendWhatsAppAlert } from '../../services/api';
+import { getWorkOrdersSummary, getFleetSummary, getLearningOverview, getCached, sendWhatsAppAlert, sendEmailAlert, openEmailDirect } from '../../services/api';
 
 export default function DashboardView({
   fleetSummary,
@@ -57,6 +58,7 @@ export default function DashboardView({
   const [hoveredPoint, setHoveredPoint] = useState(null);
   const [isGraphExpanded, setIsGraphExpanded] = useState(true);
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
   const [woSummary, setWoSummary] = useState(() => getCached('/work-orders/summary'));
   const [fleetIntel, setFleetIntel] = useState(() => getCached('/fleet/summary'));
   const [learningOverview, setLearningOverview] = useState(() => getCached('/learning/overview'));
@@ -1551,7 +1553,49 @@ export default function DashboardView({
                 }}
               >
                 <MessageSquare size={14} />
-                {sendingWhatsApp ? 'Sending...' : '📲 Alert Admin on WhatsApp'}
+                {sendingWhatsApp ? 'Sending...' : '📲 WhatsApp'}
+              </button>
+
+              <button
+                className="btn btn-sm"
+                style={{
+                  background: '#4f46e5',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  padding: '6px 14px',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+                disabled={sendingEmail}
+                onClick={async () => {
+                  try {
+                    setSendingEmail(true);
+                    const res = await sendEmailAlert({
+                      machine_id: activeFeaturedMachine.id || 1,
+                      machine_type: datasetName || 'Industrial Turbofan Engine',
+                      severity: riskLevel || 'CRITICAL',
+                      reason: telemetryDetails.whyRaised || 'High thermal degradation observed across turbine blades',
+                      action: telemetryDetails.actionPlan || 'Inspect components and schedule thermal coating check',
+                      rul: rulEstimate,
+                      health: healthIndex
+                    });
+                    if (res && res.mailto_url) {
+                      window.location.href = res.mailto_url;
+                    }
+                  } catch (err) {
+                    alert('Error sending Email alert: ' + (err.message || 'Unknown error'));
+                  } finally {
+                    setSendingEmail(false);
+                  }
+                }}
+              >
+                <Mail size={14} />
+                {sendingEmail ? 'Sending...' : '📧 Email Admin (Gmail)'}
               </button>
             </div>
 

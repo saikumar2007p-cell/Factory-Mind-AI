@@ -1,0 +1,24 @@
+[
+  {
+    "timestamp": "2026-08-21T11:43:14.835090+00:00",
+    "machine_id": 1,
+    "severity": "CRITICAL",
+    "dest_email": "admin@factorymind.ai",
+    "subject": "\ud83d\udea8 [CRITICAL] FactoryMind AI Alert: Unit #001 (Turbofan Engine CF6-80C2)",
+    "status": "EMAIL_DISPATCHED_TO_QUEUE",
+    "smtp_response": "Email queued for admin@factorymind.ai (Mailto & Internal Dispatch Active)",
+    "mailto_url": "mailto:admin@factorymind.ai?subject=%F0%9F%9A%A8%20%5BCRITICAL%5D%20FactoryMind%20AI%20Alert%3A%20Unit%20%23001%20%28Turbofan%20Engine%20CF6-80C2%29&body=FactoryMind%20AI%20%E2%80%94%20Machine%20Degradation%20Alert%0A%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%0AMACHINE%3A%20Unit%20%23001%20%28Turbofan%20Engine%20CF6-80C2%29%0ASEVERITY%3A%20CRITICAL%0AESTIMATED%20LIFE%20LEFT%3A%2024.5%20cycles%0AMACHINE%20HEALTH%20INDEX%3A%2052.4%25%0ALOGGED%20AT%3A%202026-08-21%2011%3A43%3A14%20UTC%0A%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%0ADIAGNOSED%20ROOT%20CAUSE%3A%0AHigh%20thermal%20degradation%20observed%20across%20turbine%20blades%0A%0ARECOMMENDED%20ACTION%20PLAN%3A%0AImmediate%20bore-scope%20inspection%0A%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%3D%0ALive%20Dashboard%3A%20http%3A//localhost%3A3000%0A",
+    "preview": "FactoryMind AI \u2014 Machine Degradation Alert\n================================================\nMACHINE: Unit #001 (Turbofan..."
+  },
+  {
+    "timestamp": "2026-08-21T11:43:14.862817+00:00",
+    "machine_id": 0,
+    "severity": "TEST",
+    "dest_email": "admin@factorymind.ai",
+    "subject": "\u2705 FactoryMind AI \u2014 Gmail Alerts Connected!",
+    "status": "TEST_EMAIL_READY",
+    "smtp_response": "Test message processed",
+    "mailto_url": "mailto:admin@factorymind.ai?subject=%E2%9C%85%20FactoryMind%20AI%20%E2%80%94%20Gmail%20Alerts%20Connected%21&body=Hello%20Administrator%2C%0A%0AYour%20Gmail%20address%20%28admin%40factorymind.ai%29%20has%20been%20successfully%20linked%20to%20FactoryMind%20AI%20Industrial%20Prognostics%20Platform.%0A%0AAlert%20Notification%20Triggers%3A%0A%E2%80%A2%20Critical%20Machine%20Failure%20Alarms%3A%20ENABLED%0A%E2%80%A2%20Degradation%20%26%20Wear%20Warnings%3A%20ENABLED%0A%E2%80%A2%20Prescriptive%20Maintenance%20Fix%20Plans%3A%20ENABLED%0A%0AVerified%20at%202026-08-21%2011%3A43%3A14%20UTC%0ADashboard%3A%20http%3A//localhost%3A3000%0A",
+    "preview": "Test email verification"
+  }
+]
