@@ -82,6 +82,12 @@ export default function DashboardView({
   const maxCycle = isUnit1 ? (simulationState?.max_cycle || 192) : 192;
   const progressPercent = Math.min(100, Math.round((currentCycle / maxCycle) * 100));
 
+  const rawRisk = isUnit1 && sim.risk_level 
+    ? sim.risk_level 
+    : (activeFeaturedMachine?.latest_risk_level || activeFeaturedMachine?.status || 'NORMAL');
+  
+  const riskLevel = String(rawRisk).toUpperCase();
+
   const healthIndex = isUnit1 && sim.health_index != null 
     ? sim.health_index 
     : (activeFeaturedMachine?.latest_health_index ?? activeFeaturedMachine?.health_score ?? 94.5);
@@ -90,11 +96,6 @@ export default function DashboardView({
     ? sim.rul_estimate 
     : (activeFeaturedMachine?.latest_rul ?? activeFeaturedMachine?.current_rul ?? (riskLevel === 'CRITICAL' ? 14.5 : (riskLevel === 'WARNING' ? 42.0 : 115.0)));
   
-  const rawRisk = isUnit1 && sim.risk_level 
-    ? sim.risk_level 
-    : (activeFeaturedMachine?.latest_risk_level || activeFeaturedMachine?.status || 'NORMAL');
-  
-  const riskLevel = String(rawRisk).toUpperCase();
   const anomalyScore = isUnit1 && sim.anomaly_score != null ? sim.anomaly_score : (riskLevel === 'CRITICAL' ? 0.342 : (riskLevel === 'WARNING' ? 0.184 : 0.012));
 
   // Determine Dataset Origin & Subsystems
