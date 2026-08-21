@@ -65,6 +65,13 @@ async def test_whatsapp_settings_api_and_update():
         assert update_res.json()["success"] is True
         assert update_res.json()["settings"]["admin_phone_number"] == "+919876543210"
 
+        # Restore default number
+        await client.post(
+            "/api/v1/notifications/whatsapp/settings",
+            json={"admin_phone_number": "+91 6303736452", "admin_name": "Factory Administrator"},
+            headers=headers
+        )
+
 
 @pytest.mark.asyncio
 async def test_send_whatsapp_alert_api():

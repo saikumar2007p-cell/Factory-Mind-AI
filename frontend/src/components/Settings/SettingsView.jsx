@@ -17,7 +17,9 @@ import {
   Layers,
   ArrowRight,
   Info,
-  Lock
+  Lock,
+  Smartphone,
+  MessageSquare
 } from 'lucide-react';
 import {
   getDataSources,
