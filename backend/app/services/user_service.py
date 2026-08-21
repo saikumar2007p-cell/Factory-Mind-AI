@@ -47,6 +47,11 @@ class UserService:
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
+    async def get_user_by_email(self, email: str) -> Optional[User]:
+        stmt = select(User).where(User.email == email)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
     async def get_active_admin_count(self) -> int:
         """Returns the number of currently active ADMIN users."""
         stmt = select(func.count()).where(

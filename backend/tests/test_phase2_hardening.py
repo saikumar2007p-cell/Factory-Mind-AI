@@ -392,8 +392,10 @@ async def test_multi_admin_management(client: AsyncClient):
         u_svc = UserService(db)
         existing = await u_svc.get_user_by_username("admin")
         if not existing:
-            await u_svc.create_user("admin", "Primary Admin", "ADMIN", "admin@factorymind.ai")
-            await db.commit()
+            existing_email = await u_svc.get_user_by_email("admin@factorymind.ai")
+            if not existing_email:
+                await u_svc.create_user("admin", "Primary Admin", "ADMIN", "admin@factorymind.ai")
+                await db.commit()
 
     # List users
     users_resp = await client.get("/api/v1/users", headers=headers_admin)
